@@ -92,8 +92,43 @@ VALUES (1, '2026-03-10', '2026-03-17', '2026-03-15', 3, 1), -- Fernando devolveu
 
 
 -- Comandos rápidos para verificar os dados salvos em cada tabela
-SELECT * FROM alunos
+SELECT * FROM alunos;
+SELECT * FROM livro;
+SELECT * FROM autor;
+SELECT * FROM livro_autor;
+SELECT * FROM emprestimo;
+
+-- Desafio 1: Escreva um comando para listar apenas os alunos que fazem o curso de 'Psicologia'
+
+SELECT nome, curso FROM alunos
+WHERE curso = 'Psicologia';
+
+-- Desafio 2: Escreva uma consulta que traga apenas os livros que tenham mais de 400 páginas.
+
+SELECT titulo, nr_paginas FROM livro
+WHERE nr_paginas > 400;
+
+-- Desafio 3 (Livro específico): Mostre as informações do livro cujo codigo seja igual a 2.
+
 SELECT * FROM livro
+WHERE codigo = 2;
+
+-- Desafio 4 (Estoque): Busque os livros que têm mais de 350 páginas E que foram publicados depois do ano 2000.
+
+SELECT * FROM livro
+WHERE nr_paginas > 350 AND ano_publicacao > 2000;
+
+-- Desafio 5 (Busca de texto parcialmente): Busque na tabela autor qualquer escritor cujo nome comece com a letra 'J' (Dica: use o operador LIKE 'J%').
+
 SELECT * FROM autor
-SELECT * FROM livro_autor
+WHERE nome LIKE 'J%';
+
+-- Desafio 6 (Empréstimos pendentes): Liste todos os empréstimos onde a data_devolucao_real é nula (ou seja, IS NULL), indicando que o livro ainda não foi devolvido.
+
 SELECT * FROM emprestimo
+WHERE data_devolucao_real IS NULL;
+
+-- Desafio 7 (Organizar ordem): Mostre todos os livros cadastrados, mas organizados do mais novo para o mais antigo (ordem decrescente de ano_publicacao).
+
+SELECT * FROM livro
+ORDER BY ano_publicacao DESC;
