@@ -1,4 +1,4 @@
-# Projects & Studies 
+# Projects & Activities 
 
 Repositório destinado à organização dos meus projetos, estudos, exercícios e atividades práticas na área de tecnologia, reunindo diferentes linguagens, ferramentas e conhecimentos desenvolvidos ao longo da minha jornada acadêmica e profissional.
 
