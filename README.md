@@ -1,14 +1,11 @@
-# Academic Projects & Activities
+# Projects & Studies 
 
-Repositório centralizado para armazenamento e organização de todas as atividades práticas,
-laboratórios e projetos acadêmicos desenvolvidos durante a graduação em Engenharia de
-Computação.
+Repositório destinado à organização dos meus projetos, estudos, exercícios e atividades práticas na área de tecnologia, reunindo diferentes linguagens, ferramentas e conhecimentos desenvolvidos ao longo da minha jornada acadêmica e profissional.
 
-## Instituição
+## Formação
 * **Universidade:** Centro Universitário SATC (UNISATC)
 * **Curso:** Engenharia de Computação
-* **Objetivo:** Demonstração de evolução técnica, lógica de programação e engenharia de
-software para portfólio.
+* **Foco:** Desenvolvimento de habilidades em programação, banco de dados, modelagem e desenvolvimento de software.
 
 ## Tecnologias e Ferramentas Utilizadas
 * **Linguagens de Programação:** C, C++, Python
@@ -20,8 +17,10 @@ software para portfólio.
 
 O repositório está organizado de acordo com as disciplinas e linguagens estudadas:
 
-* `C-Cplusplus/` — Atividades de aula e projetos de Algoritmos e Estruturas de Dados. Inclui conceitos de vetores (arrays), manipulação de dados em loops e condicionais, além do uso de ferramentas como o Dev-C++.
-* `Python/` — Projetos acadêmicos e exercícios de lógica de programação de conteúdos originados das aulas e também desafios sincronizados com a plataforma Beecrowd.
+* `C-Cplusplus/` — Atividades e projetos envolvendo C e C++, incluindo conceitos de algoritmos, estruturas de dados, vetores (arrays), loops, condicionais e alocação dinâmica.
+* `Python/` — Exercícios e projetos desenvolvidos para praticar lógica de programação e conceitos da linguagem Python.
+* `SQL/` — Estudos relacionados a banco de dados, SQL, comandos DDL/DML e modelagem relacional.
+* `Draw.io/` — Diagramas e modelos desenvolvidos para representação e modelagem de sistemas.
 
-## Conexões Profissionais
-* [Meu LinkedIn](https://www.linkedin.com/in/alice-da-cruz-justi-37580438a)
+## Conecte-se comigo
+* [LinkedIn](https://www.linkedin.com/in/alice-da-cruz-justi-37580438a)
