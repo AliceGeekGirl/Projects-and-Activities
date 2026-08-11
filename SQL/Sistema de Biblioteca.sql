@@ -126,9 +126,31 @@ WHERE nome LIKE 'J%';
 -- Desafio 6 (Empréstimos pendentes): Liste todos os empréstimos onde a data_devolucao_real é nula (ou seja, IS NULL), indicando que o livro ainda não foi devolvido.
 
 SELECT * FROM emprestimo
-WHERE data_devolucao_real IS NULL;
+WHERE data_devolucao_real IS NULL; -- Filtra registros onde a data de devolução está vazia (nula)
 
 -- Desafio 7 (Organizar ordem): Mostre todos os livros cadastrados, mas organizados do mais novo para o mais antigo (ordem decrescente de ano_publicacao).
 
 SELECT * FROM livro
 ORDER BY ano_publicacao DESC;
+
+-- Desafio 8: Adicionar data_cadastro na tabela alunos
+
+ALTER TABLE alunos -- Informa que a tabela autor será alterada
+ADD COLUMN data_cadastro DATE DEFAULT CURRENT_DATE; -- Cria a coluna data_cadastro que pega a data atual automaticamente
+
+-- Desafio 9: Renomear coluna na tabela autor
+ALTER TABLE autor 
+RENAME COLUMN pais TO pais_origem; -- Altera o nome da coluna pais para pais_origem
+
+-- Desafio 10: Alterar tamanho do titulo na tabela livro
+ALTER TABLE livro 
+ALTER COLUMN titulo TYPE VARCHAR(150); -- Modifica o tipo e limite de tamanho da coluna titulo
+
+-- Desafio 11: Definir NOT NULL na coluna pais_origem da tabela autor
+ALTER TABLE autor 
+ALTER COLUMN pais_origem SET NOT NULL; -- Aplica a restrição para não permitir valores nulos na coluna
+
+-- Desafio 12: Adicionar categoria e remover nr_paginas em um único ALTER TABLE
+ALTER TABLE livro 
+ADD COLUMN categoria VARCHAR(30), -- Adiciona a nova coluna categoria com limite de 30 caracteres
+DROP COLUMN nr_paginas; -- Remove permanentemente a coluna nr_paginas da tabela
