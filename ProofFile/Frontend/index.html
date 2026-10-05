@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+
+    <title>Registro de Contrato - ProofFile</title>
+</head>
+
+<body>
+
+    <h1>Registrar contrato</h1>
+
+    <form
+        action="http://127.0.0.1:5000/register"
+        method="POST"
+        enctype="multipart/form-data"
+    >
+
+        <div>
+            <label for="contract_name">
+                Nome do contrato:
+            </label>
+
+            <input
+                type="text"
+                id="contract_name"
+                name="contract_name"
+                required
+            >
+        </div>
+
+        <br>
+
+        <div>
+            <label for="expiration_date">
+                Data de expiração:
+            </label>
+
+            <input
+                type="date"
+                id="expiration_date"
+                name="expiration_date"
+            >
+        </div>
+
+        <br>
+
+        <div>
+            <label for="file">
+                Arquivo PDF:
+            </label>
+
+            <input
+                type="file"
+                id="file"
+                name="file"
+                accept=".pdf"
+                required
+            >
+        </div>
+
+        <br>
+
+        <button type="submit">
+            Registrar contrato
+        </button>
+
+    </form>
+
+</body>
+
+</html>

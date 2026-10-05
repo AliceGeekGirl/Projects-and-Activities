@@ -58,3 +58,14 @@ SELECT ct.contract_name, cm.company_name, u.name, ct.registration_date, ct.expir
 FROM contracts AS ct INNER JOIN users AS u -- Relaciona juntando o contrato ao usuário que o cadastrou
     ON ct.user_id = u.id INNER JOIN companies AS cm -- Relaciona juntando o contrato à empresa
     ON ct.company_id = cm.id;
+
+SELECT
+    id,
+    verification_code,
+    contract_name,
+    registration_date,
+    expiration_date,
+    file_path,
+    file_hash,
+    solana_transaction
+FROM contracts;
