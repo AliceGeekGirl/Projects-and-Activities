@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Teste de Registro - ProofFile</title>
+</head>
+
+<body>
+
+    <h1>Registrar contrato</h1>
+
+    <form id="registerForm">
+
+        <label for="contractName">
+            Nome do contrato:
+        </label>
+
+        <input
+            type="text"
+            id="contractName"
+            required
+        >
+
+        <br><br>
+
+        <label for="expirationDate">
+            Data de expiração:
+        </label>
+
+        <input
+            type="date"
+            id="expirationDate"
+        >
+
+        <br><br>
+
+        <label for="file">
+            Contrato PDF:
+        </label>
+
+        <input
+            type="file"
+            id="file"
+            accept=".pdf"
+            required
+        >
+
+        <br><br>
+
+        <button type="submit">
+            Registrar contrato
+        </button>
+
+    </form>
+
+    <pre id="result"></pre>
+
+    <script>
+        // Pega o formulário de registro.
+        const form = document.getElementById("registerForm");
+
+        // Pega o elemento onde vamos mostrar as mensagens.
+        const result = document.getElementById("result");
+
+        // Executa quando o formulário for enviado.
+        form.addEventListener("submit", async (event) => {
+
+            // Impede o navegador de recarregar a página.
+            event.preventDefault();
+
+            // Mostra que o JavaScript recebeu o clique.
+            result.textContent = "Preparando o registro...";
+
+            try {
+
+                // Cria os dados que serão enviados para o Backend.
+                const formData = new FormData();
+
+                // Pega o nome do contrato.
+                const contractName =
+                    document.getElementById("contractName").value;
+
+                // Adiciona o nome aos dados enviados.
+                formData.append("contract_name", contractName);
+
+                // Pega a data de expiração.
+                const expirationDate =
+                    document.getElementById("expirationDate").value;
+
+                // Adiciona a data aos dados enviados.
+                formData.append("expiration_date", expirationDate);
+
+                // Pega o arquivo selecionado.
+                const fileInput = document.getElementById("file");
+                const file = fileInput.files[0];
+
+                // Verifica se existe um arquivo selecionado.
+                if (!file) {
+                    throw new Error("Nenhum PDF foi selecionado.");
+                }
+
+                // Mostra no site qual arquivo será enviado.
+                result.textContent =
+                    "Enviando: " + file.name;
+
+                // Adiciona o PDF aos dados enviados.
+                formData.append("file", file);
+
+                // Envia os dados para o Backend Flask.
+                const response = await fetch(
+                    "http://127.0.0.1:5000/register",
+                    {
+                        method: "POST",
+                        body: formData
+                    }
+                );
+
+                // Informa que o Backend respondeu.
+                result.textContent =
+                    "Backend respondeu com status: " +
+                    response.status;
+
+                // Lê a resposta como texto.
+                // Lê a resposta enviada pelo Backend.
+                const responseText = await response.text();
+
+                // Mostra no console exatamente o que o Backend respondeu.
+                console.log("STATUS:", response.status);
+                console.log("RESPOSTA:", responseText);
+
+                // Tenta converter a resposta para JSON.
+                const data = JSON.parse(responseText);
+
+                // Se o Backend retornou erro, mostra a mensagem.
+                if (!response.ok) {
+                    throw new Error(
+                        data.error || "O Backend retornou um erro."
+                    );
+                }
+
+                // Mostra os dados do registro realizado.
+                result.textContent =
+                    JSON.stringify(data, null, 4);
+
+            } catch (error) {
+
+                // Mostra exatamente onde o processo parou.
+                result.textContent =
+                    "Erro:\n\n" + error.message;
+
+                // Também mostra o erro no console do navegador.
+                console.error("Erro no registro:", error);
+            }
+        });
+    </script>
+
+</body>
+
+</html>
