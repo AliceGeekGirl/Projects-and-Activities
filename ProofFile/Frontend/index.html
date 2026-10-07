@@ -4,69 +4,114 @@
 <head>
     <meta charset="UTF-8">
 
-    <title>Registro de Contrato - ProofFile</title>
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>ProofFile - Verificação de Contratos</title>
+
+    <link rel="stylesheet" href="css/style.css">
 </head>
 
 <body>
 
-    <h1>Registrar contrato</h1>
+    <main class="home">
 
-    <form
-        action="http://127.0.0.1:5000/register"
-        method="POST"
-        enctype="multipart/form-data"
-    >
+        <section class="hero">
 
-        <div>
-            <label for="contract_name">
-                Nome do contrato:
-            </label>
+            <div class="logo">
+                Proof<span>File</span>
+            </div>
 
-            <input
-                type="text"
-                id="contract_name"
-                name="contract_name"
-                required
-            >
-        </div>
+            <p class="tagline">
+                Segurança e confiança para seus contratos.
+            </p>
 
-        <br>
+            <h1>
+                Registre e verifique seus contratos
+            </h1>
 
-        <div>
-            <label for="expiration_date">
-                Data de expiração:
-            </label>
+            <p class="description">
+                O ProofFile permite registrar um contrato e verificar
+                posteriormente se o arquivo corresponde ao documento
+                originalmente registrado.
+            </p>
 
-            <input
-                type="date"
-                id="expiration_date"
-                name="expiration_date"
-            >
-        </div>
+        </section>
 
-        <br>
 
-        <div>
-            <label for="file">
-                Arquivo PDF:
-            </label>
+        <section class="options">
 
-            <input
-                type="file"
-                id="file"
-                name="file"
-                accept=".pdf"
-                required
-            >
-        </div>
+            <a href="register.html" class="option-card">
 
-        <br>
+                <div class="option-icon">
+                    🏢
+                </div>
 
-        <button type="submit">
-            Registrar contrato
-        </button>
+                <h2>
+                    Sou Empresa
+                </h2>
 
-    </form>
+                <p>
+                    Registre um contrato e gere um código de
+                    verificação para ele.
+                </p>
+
+                <span class="option-button">
+                    Registrar contrato
+                </span>
+
+            </a>
+
+
+            <a href="verify.html" class="option-card">
+
+                <div class="option-icon">
+                    ✓
+                </div>
+
+                <h2>
+                    Sou Cliente
+                </h2>
+
+                <p>
+                    Verifique se um contrato corresponde ao
+                    registro original.
+                </p>
+
+                <span class="option-button">
+                    Verificar contrato
+                </span>
+
+            </a>
+
+        </section>
+
+
+        <section class="security-info">
+
+            <h2>
+                Como funciona?
+            </h2>
+
+            <p>
+                O arquivo é analisado e seu conteúdo é transformado
+                em uma identificação digital. Essa informação é usada
+                para comparar o contrato original com o arquivo
+                apresentado posteriormente.
+            </p>
+
+        </section>
+
+
+        <footer>
+            <p>
+                ProofFile · Verificação de contratos
+            </p>
+        </footer>
+
+    </main>
 
 </body>
 

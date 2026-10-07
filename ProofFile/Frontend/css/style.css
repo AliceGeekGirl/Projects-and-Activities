@@ -1,0 +1,228 @@
+/* =========================
+   CONFIGURAÇÕES GERAIS
+========================= */
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: Arial, Helvetica, sans-serif;
+    background-color: #f7f9fc;
+    color: #1f2937;
+    min-height: 100vh;
+}
+
+
+/* =========================
+   CONTAINER PRINCIPAL
+========================= */
+
+.home {
+    width: 100%;
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 40px 24px;
+}
+
+
+/* =========================
+   HERO
+========================= */
+
+.hero {
+    text-align: center;
+    max-width: 750px;
+    margin: 0 auto 60px;
+}
+
+.logo {
+    font-size: 32px;
+    font-weight: 700;
+    color: #111827;
+    margin-bottom: 16px;
+}
+
+.logo span {
+    color: #2563eb;
+}
+
+.tagline {
+    font-size: 16px;
+    color: #64748b;
+    margin-bottom: 28px;
+}
+
+.hero h1 {
+    font-size: 42px;
+    line-height: 1.2;
+    color: #111827;
+    margin-bottom: 20px;
+}
+
+.description {
+    font-size: 18px;
+    line-height: 1.7;
+    color: #64748b;
+}
+
+
+/* =========================
+   OPÇÕES
+========================= */
+
+.options {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 24px;
+    margin-bottom: 60px;
+}
+
+.option-card {
+    background-color: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 16px;
+    padding: 36px;
+    text-decoration: none;
+    color: inherit;
+
+    transition:
+        transform 0.2s ease,
+        box-shadow 0.2s ease,
+        border-color 0.2s ease;
+}
+
+.option-card:hover {
+    transform: translateY(-4px);
+    border-color: #cbd5e1;
+    box-shadow: 0 12px 30px rgba(15, 23, 42, 0.08);
+}
+
+.option-icon {
+    width: 52px;
+    height: 52px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    border-radius: 12px;
+    background-color: #eff6ff;
+
+    font-size: 24px;
+
+    margin-bottom: 24px;
+}
+
+.option-card h2 {
+    font-size: 24px;
+    color: #111827;
+    margin-bottom: 12px;
+}
+
+.option-card p {
+    font-size: 16px;
+    line-height: 1.6;
+    color: #64748b;
+
+    margin-bottom: 28px;
+}
+
+
+/* =========================
+   BOTÃO DOS CARDS
+========================= */
+
+.option-button {
+    display: inline-block;
+
+    background-color: #2563eb;
+    color: #ffffff;
+
+    padding: 12px 20px;
+
+    border-radius: 8px;
+
+    font-size: 15px;
+    font-weight: 600;
+}
+
+
+/* =========================
+   INFORMAÇÕES DE SEGURANÇA
+========================= */
+
+.security-info {
+    max-width: 750px;
+    margin: 0 auto 60px;
+
+    background-color: #ffffff;
+
+    border: 1px solid #e2e8f0;
+    border-radius: 16px;
+
+    padding: 32px;
+}
+
+.security-info h2 {
+    font-size: 22px;
+    color: #111827;
+    margin-bottom: 12px;
+}
+
+.security-info p {
+    color: #64748b;
+    line-height: 1.7;
+}
+
+
+/* =========================
+   RODAPÉ
+========================= */
+
+footer {
+    text-align: center;
+    color: #94a3b8;
+    font-size: 14px;
+}
+
+
+/* =========================
+   RESPONSIVIDADE
+========================= */
+
+@media (max-width: 700px) {
+
+    .home {
+        padding: 30px 18px;
+    }
+
+    .hero {
+        margin-bottom: 40px;
+    }
+
+    .hero h1 {
+        font-size: 32px;
+    }
+
+    .description {
+        font-size: 16px;
+    }
+
+    .options {
+        grid-template-columns: 1fr;
+        gap: 16px;
+        margin-bottom: 40px;
+    }
+
+    .option-card {
+        padding: 28px;
+    }
+
+    .security-info {
+        padding: 24px;
+        margin-bottom: 40px;
+    }
+}
