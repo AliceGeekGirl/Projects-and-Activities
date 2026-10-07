@@ -48,6 +48,8 @@ load_dotenv()
 #Cria a aplicação Flask.
 app = Flask(__name__)
 
+CORS(app)
+
 #Pega a URL de conexão do PostgreSQL armazenada no .env.
 DATABASE_URL = os.getenv("DATABASE_URL")
 
@@ -384,6 +386,164 @@ def get_contract_by_code(verification_code):
 
     #Retorna os dados encontrados em formato JSON.
     return jsonify(result)
+
+@app.route("/verify", methods=["POST"])
+async def verify_contract():
+    import psycopg
+
+    # Verifica se o código foi enviado.
+    verification_code = request.form.get("verification_code")
+
+    if not verification_code:
+        return jsonify({
+            "error": "O código de verificação é obrigatório."
+        }), 400
+
+    # Verifica se um arquivo foi enviado.
+    if "file" not in request.files:
+        return jsonify({
+            "error": "Nenhum arquivo foi enviado."
+        }), 400
+
+    file = request.files["file"]
+
+    if file.filename == "":
+        return jsonify({
+            "error": "Nenhum arquivo foi selecionado."
+        }), 400
+
+    # Lê o arquivo enviado pelo cliente.
+    file_data = file.read()
+
+    # Calcula o hash do arquivo recebido.
+    file_hash = hashlib.sha256(file_data).hexdigest()
+
+    try:
+        conn = psycopg.connect(DATABASE_URL)
+        cur = conn.cursor()
+
+        # Busca o contrato pelo código de verificação.
+        cur.execute(
+            """
+            SELECT
+                ct.contract_name,
+                cm.company_name,
+                u.name,
+                ct.registration_date,
+                ct.expiration_date,
+                ct.file_path,
+                ct.file_hash,
+                ct.solana_transaction
+            FROM contracts AS ct
+            INNER JOIN users AS u
+                ON ct.user_id = u.id
+            INNER JOIN companies AS cm
+                ON ct.company_id = cm.id
+            WHERE ct.verification_code = %s;
+            """,
+            (verification_code,)
+        )
+
+        result = cur.fetchone()
+
+        cur.close()
+        conn.close()
+
+        # Código não encontrado.
+        if result is None:
+            return jsonify({
+                "error": "Código de verificação não encontrado."
+            }), 404
+
+        (
+            contract_name,
+            company_name,
+            user_name,
+            registration_date,
+            expiration_date,
+            file_path,
+            registered_hash,
+            solana_transaction
+        ) = result
+
+        # Compara o hash do arquivo recebido
+        # com o hash registrado originalmente.
+        matches = file_hash == registered_hash
+
+        return jsonify({
+            "verified": matches,
+            "message": (
+                "O contrato corresponde ao registro."
+                if matches
+                else "O contrato não corresponde ao registro."
+            ),
+            "verification_code": verification_code,
+            "contract_name": contract_name,
+            "company_name": company_name,
+            "registration_date": str(registration_date),
+            "expiration_date": (
+                str(expiration_date)
+                if expiration_date
+                else None
+            ),
+            "file_hash": file_hash,
+            "registered_hash": registered_hash,
+            "solana_transaction": solana_transaction
+        }), 200
+
+    except Exception as error:
+        print(f"ERRO NA VERIFICAÇÃO: {error}")
+
+        return jsonify({
+            "error": str(error)
+        }), 500
+
+@app.route("/contract-file/<verification_code>")
+def get_contract_file(verification_code):
+    import psycopg
+    from flask import send_file
+
+    conn = psycopg.connect(DATABASE_URL)
+    cur = conn.cursor()
+
+    cur.execute(
+        """
+        SELECT file_path
+        FROM contracts
+        WHERE verification_code = %s;
+        """,
+        (verification_code,)
+    )
+
+    result = cur.fetchone()
+
+    cur.close()
+    conn.close()
+
+    if result is None:
+        return "Contrato não encontrado.", 404
+
+    file_path = Path(result[0])
+
+    if not file_path.exists():
+        return "Arquivo do contrato não encontrado.", 404
+
+    return send_file(
+        file_path,
+        mimetype="application/pdf"
+    )
+
+@app.route("/verify-test.html")
+def verify_test():
+    frontend_folder = (
+        Path(__file__).resolve().parent.parent
+        / "Frontend"
+    )
+
+    return send_from_directory(
+        frontend_folder,
+        "verify-test.html"
+    )
 
 @app.route("/register-test.html")
 def register_test():

@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Verificar contrato - ProofFile</title>
+</head>
+
+<body>
+
+    <h1>Verificar contrato</h1>
+
+    <p>
+        Informe o código de verificação e envie o PDF
+        recebido para verificar se ele corresponde
+        ao contrato registrado.
+    </p>
+
+    <br>
+
+    <label for="verificationCode">
+        Código de verificação:
+    </label>
+
+    <input
+        type="text"
+        id="verificationCode"
+        placeholder="PF-XXXXXXXX"
+        required
+    >
+
+    <br><br>
+
+    <label for="file">
+        Contrato PDF:
+    </label>
+
+    <input
+        type="file"
+        id="file"
+        accept=".pdf"
+        required
+    >
+
+    <br><br>
+
+    <button type="button" id="verifyButton">
+        Verificar contrato
+    </button>
+
+    <br><br>
+
+    <div id="result"></div>
+
+    <script>
+
+        const button =
+            document.getElementById("verifyButton");
+
+        const result =
+            document.getElementById("result");
+
+        button.addEventListener("click", async () => {
+
+            result.textContent =
+                "Verificando contrato...";
+
+            const verificationCode =
+                document
+                    .getElementById("verificationCode")
+                    .value
+                    .trim();
+
+            if (!verificationCode) {
+                result.textContent =
+                    "Informe o código de verificação.";
+                return;
+            }
+
+            const file =
+                document
+                    .getElementById("file")
+                    .files[0];
+
+            if (!file) {
+                result.textContent =
+                    "Selecione o contrato PDF.";
+                return;
+            }
+
+            const formData = new FormData();
+
+            formData.append(
+                "verification_code",
+                verificationCode
+            );
+
+            formData.append(
+                "file",
+                file
+            );
+
+            try {
+
+                const response = await fetch(
+                    "http://127.0.0.1:5000/verify",
+                    {
+                        method: "POST",
+                        body: formData
+                    }
+                );
+
+                const data =
+                    await response.json();
+
+                if (!response.ok) {
+
+                    result.innerHTML = `
+                        <h2>Erro</h2>
+
+                        <p>
+                            ${data.error || "Erro desconhecido."}
+                        </p>
+                    `;
+
+                    return;
+                }
+
+                if (data.verified) {
+
+                    result.innerHTML = `
+                        <h2>✅ O contrato corresponde ao registro.</h2>
+
+                        <p>
+                            <strong>Contrato:</strong>
+                            ${data.contract_name}
+                        </p>
+
+                        <p>
+                            <strong>Empresa:</strong>
+                            ${data.company_name}
+                        </p>
+
+                        <p>
+                            <strong>Data de registro:</strong>
+                            ${data.registration_date}
+                        </p>
+
+                        <p>
+                            <strong>Data de término:</strong>
+                            ${data.expiration_date || "Não informada"}
+                        </p>
+
+                        <p>
+                            <strong>Código de verificação:</strong>
+                            ${data.verification_code}
+                        </p>
+
+                        <p>
+                            <strong>Registro na Solana:</strong>
+                            <a
+                                href="https://explorer.solana.com/tx/${data.solana_transaction}?cluster=devnet"
+                                target="_blank"
+                            >
+                                Ver transação
+                            </a>
+                        </p>
+
+                        <p>
+                            <a
+                                href="/contract-file/${data.verification_code}"
+                                target="_blank"
+                            >
+                                Ver contrato registrado
+                            </a>
+                        </p>
+                    `;
+
+                } else {
+
+                    result.innerHTML = `
+                        <h2>❌ O contrato não corresponde ao registro.</h2>
+
+                        <p>
+                            O arquivo enviado possui um conteúdo
+                            diferente do contrato originalmente registrado.
+                        </p>
+
+                        <p>
+                            <strong>Contrato:</strong>
+                            ${data.contract_name}
+                        </p>
+
+                        <p>
+                            <strong>Empresa:</strong>
+                            ${data.company_name}
+                        </p>
+
+                        <p>
+                            <strong>Data de registro:</strong>
+                            ${data.registration_date}
+                        </p>
+
+                        <p>
+                            <strong>Data de término:</strong>
+                            ${data.expiration_date || "Não informada"}
+                        </p>
+
+                        <p>
+                            <strong>Código de verificação:</strong>
+                            ${data.verification_code}
+                        </p>
+
+                        <p>
+                            <strong>Registro na Solana:</strong>
+                            <a
+                                href="https://explorer.solana.com/tx/${data.solana_transaction}?cluster=devnet"
+                                target="_blank"
+                            >
+                                Ver transação
+                            </a>
+                        </p>
+
+                        <p>
+                            <a
+                                href="/contract-file/${data.verification_code}"
+                                target="_blank"
+                            >
+                                Ver contrato registrado
+                            </a>
+                        </p>
+                    `;
+                }
+
+            } catch (error) {
+
+                result.innerHTML = `
+                    <h2>Erro ao conectar com o Backend</h2>
+
+                    <p>
+                        ${error.message}
+                    </p>
+                `;
+            }
+        });
+
+    </script>
+
+</body>
+
+</html>
