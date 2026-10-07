@@ -9,7 +9,7 @@
         content="width=device-width, initial-scale=1.0"
     >
 
-    <title>Registrar contrato - ProofFile</title>
+    <title>Verificar contrato - ProofFile</title>
 
     <link rel="stylesheet" href="css/style.css">
 </head>
@@ -29,53 +29,38 @@
             </div>
 
             <h1>
-                Registrar contrato
+                Verificar contrato
             </h1>
 
             <p>
-                Registre seu contrato para gerar um código de
-                verificação e comprovar posteriormente que o
-                arquivo corresponde ao registro original.
+                Envie o contrato e informe o código de verificação
+                recebido para conferir se o arquivo corresponde ao
+                registro original.
             </p>
 
         </section>
 
 
-        <section class="form-card" id="registerCard">
+        <section class="form-card" id="verifyCard">
 
-            <form id="registerForm">
+            <form id="verifyForm">
 
                 <div class="form-group">
 
-                    <label for="contract_name">
-                        Nome do contrato
+                    <label for="verification_code">
+                        Código de verificação
                     </label>
 
                     <input
                         type="text"
-                        id="contract_name"
-                        name="contract_name"
-                        placeholder="Ex.: Contrato de prestação de serviços"
+                        id="verification_code"
+                        name="verification_code"
+                        placeholder="Ex.: PF-9FA12470"
                         required
                     >
 
-                </div>
-
-
-                <div class="form-group">
-
-                    <label for="expiration_date">
-                        Data de término
-                    </label>
-
-                    <input
-                        type="date"
-                        id="expiration_date"
-                        name="expiration_date"
-                    >
-
                     <span class="field-help">
-                        Este campo é opcional.
+                        Informe o código fornecido no registro do contrato.
                     </span>
 
                 </div>
@@ -96,7 +81,7 @@
                     >
 
                     <span class="field-help">
-                        Envie o arquivo PDF do contrato que deseja registrar.
+                        Envie o arquivo que deseja verificar.
                     </span>
 
                 </div>
@@ -105,9 +90,9 @@
                 <button
                     type="submit"
                     class="primary-button"
-                    id="registerButton"
+                    id="verifyButton"
                 >
-                    Registrar contrato
+                    Verificar contrato
                 </button>
 
             </form>
@@ -117,7 +102,7 @@
 
         <section
             class="result-card"
-            id="registerResult"
+            id="verifyResult"
             hidden
         >
         </section>
@@ -126,13 +111,13 @@
         <section class="info-card">
 
             <h2>
-                O que acontece depois?
+                Como funciona?
             </h2>
 
             <p>
-                O ProofFile calcula uma identificação do arquivo,
-                registra essa informação e gera um código de
-                verificação para o contrato.
+                O ProofFile compara o arquivo enviado com o contrato
+                que foi originalmente registrado. Se os arquivos
+                corresponderem, a verificação será confirmada.
             </p>
 
         </section>
