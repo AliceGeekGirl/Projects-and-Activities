@@ -17,5 +17,9 @@
             "username": "neondb_owner",
             "password": "npg_JfiuAWF7grY4"
         }
+    ],
+
+    "liveServer.settings.ignoreFiles": [
+        "**/Backend/uploads/**"
     ]
 }

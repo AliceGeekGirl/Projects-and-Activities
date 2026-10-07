@@ -10,104 +10,86 @@
 
     <h1>Registrar contrato</h1>
 
-    <form id="registerForm">
+    <div id="registerForm">
 
-        <label for="contractName">
-            Nome do contrato:
-        </label>
-
-        <input
-            type="text"
-            id="contractName"
-            required
-        >
+        <label for="contractName">Nome do contrato:</label>
+        <input type="text" id="contractName" required>
 
         <br><br>
 
-        <label for="expirationDate">
-            Data de expiração:
-        </label>
-
-        <input
-            type="date"
-            id="expirationDate"
-        >
+        <label for="expirationDate">Data de expiração:</label>
+        <input type="date" id="expirationDate">
 
         <br><br>
 
-        <label for="file">
-            Contrato PDF:
-        </label>
-
-        <input
-            type="file"
-            id="file"
-            accept=".pdf"
-            required
-        >
+        <label for="file">Contrato PDF:</label>
+        <input type="file" id="file" accept=".pdf" required>
 
         <br><br>
 
-        <button type="submit">
+        <button type="button" id="registerButton">
             Registrar contrato
         </button>
 
-    </form>
+    </div>
 
     <pre id="result"></pre>
 
     <script>
-        // Pega o formulário de registro.
-        const form = document.getElementById("registerForm");
 
-        // Pega o elemento onde vamos mostrar as mensagens.
+        // Pega o elemento onde o resultado do cadastro será exibido.
         const result = document.getElementById("result");
 
-        // Executa quando o formulário for enviado.
-        form.addEventListener("submit", async (event) => {
+        // Pega o botão de registro.
+        const button = document.getElementById("registerButton");
 
-            // Impede o navegador de recarregar a página.
-            event.preventDefault();
+        // Executa quando o botão for clicado.
+        button.addEventListener("click", async () => {
 
-            // Mostra que o JavaScript recebeu o clique.
-            result.textContent = "Preparando o registro...";
+            // Mostra uma mensagem enquanto o Backend processa o cadastro.
+            result.textContent = "Registrando contrato...";
+
+            // Cria os dados que serão enviados para o Backend.
+            const formData = new FormData();
+
+            // Pega o nome do contrato informado pelo usuário.
+            const contractName =
+                document.getElementById("contractName").value;
+
+            // Verifica se o nome do contrato foi preenchido.
+            if (!contractName) {
+                result.textContent =
+                    "Informe o nome do contrato.";
+                return;
+            }
+
+            // Adiciona o nome do contrato aos dados enviados.
+            formData.append("contract_name", contractName);
+
+            // Pega a data de expiração.
+            const expirationDate =
+                document.getElementById("expirationDate").value;
+
+            // Adiciona a data aos dados enviados.
+            formData.append("expiration_date", expirationDate);
+
+            // Pega o arquivo selecionado.
+            const file =
+                document.getElementById("file").files[0];
+
+            // Verifica se um arquivo foi selecionado.
+            if (!file) {
+                result.textContent =
+                    "Selecione um arquivo PDF.";
+                return;
+            }
+
+            // Adiciona o PDF aos dados enviados.
+            formData.append("file", file);
 
             try {
 
-                // Cria os dados que serão enviados para o Backend.
-                const formData = new FormData();
-
-                // Pega o nome do contrato.
-                const contractName =
-                    document.getElementById("contractName").value;
-
-                // Adiciona o nome aos dados enviados.
-                formData.append("contract_name", contractName);
-
-                // Pega a data de expiração.
-                const expirationDate =
-                    document.getElementById("expirationDate").value;
-
-                // Adiciona a data aos dados enviados.
-                formData.append("expiration_date", expirationDate);
-
-                // Pega o arquivo selecionado.
-                const fileInput = document.getElementById("file");
-                const file = fileInput.files[0];
-
-                // Verifica se existe um arquivo selecionado.
-                if (!file) {
-                    throw new Error("Nenhum PDF foi selecionado.");
-                }
-
-                // Mostra no site qual arquivo será enviado.
-                result.textContent =
-                    "Enviando: " + file.name;
-
-                // Adiciona o PDF aos dados enviados.
-                formData.append("file", file);
-
-                // Envia os dados para o Backend Flask.
+                // Envia os dados para o Backend.
                 const response = await fetch(
                     "http://127.0.0.1:5000/register",
                     {
@@ -116,27 +98,15 @@
                     }
                 );
 
-                // Informa que o Backend respondeu.
-                result.textContent =
-                    "Backend respondeu com status: " +
-                    response.status;
-
-                // Lê a resposta como texto.
                 // Lê a resposta enviada pelo Backend.
-                const responseText = await response.text();
+                const data = await response.json();
 
-                // Mostra no console exatamente o que o Backend respondeu.
-                console.log("STATUS:", response.status);
-                console.log("RESPOSTA:", responseText);
-
-                // Tenta converter a resposta para JSON.
-                const data = JSON.parse(responseText);
-
-                // Se o Backend retornou erro, mostra a mensagem.
+                // Verifica se o Backend retornou algum erro.
                 if (!response.ok) {
-                    throw new Error(
-                        data.error || "O Backend retornou um erro."
-                    );
+                    result.textContent =
+                        "Erro ao registrar contrato:\n\n" +
+                        (data.error || "Erro desconhecido.");
+                    return;
                 }
 
                 // Mostra os dados do registro realizado.
@@ -145,14 +115,14 @@
 
             } catch (error) {
 
-                // Mostra exatamente onde o processo parou.
+                // Mostra o erro caso o navegador
+                // não consiga se comunicar com o Backend.
                 result.textContent =
-                    "Erro:\n\n" + error.message;
-
-                // Também mostra o erro no console do navegador.
-                console.error("Erro no registro:", error);
+                    "Erro ao conectar com o Backend:\n\n" +
+                    error.message;
             }
         });
+
     </script>
 
 </body>

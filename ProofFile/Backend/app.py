@@ -1,5 +1,5 @@
 #Importa o Flask para criar o servidor web, o jsonify para retornar respostas em JSON e o request para acessar os dados enviados pelo Frontend.
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request, send_from_directory
 
 from flask_cors import CORS
 
@@ -385,8 +385,15 @@ def get_contract_by_code(verification_code):
     #Retorna os dados encontrados em formato JSON.
     return jsonify(result)
 
- #Verifica se este arquivo app.py está sendo executado diretamente pelo Python. Essa condição evita que o servidor seja iniciado automaticamente caso o arquivo seja importado por outro arquivo do projeto
-if __name__ == "__main__":
+@app.route("/register-test.html")
+def register_test():
+    frontend_folder = Path(__file__).resolve().parent.parent / "Frontend"
 
-    #Inicia o servidor Flask quando este arquivo é executado diretamente.
-    app.run(debug=True)  #O modo debug facilita o desenvolvimento porque mostra erros detalhados e reinicia o servidor quando o código é alterado.
+    return send_from_directory(
+        frontend_folder,
+        "register-test.html"
+    )
+
+#Verifica se este arquivo app.py está sendo executado diretamente pelo Python. Essa condição evita que o servidor seja iniciado automaticamente caso o arquivo seja importado por outro arquivo do projeto
+if __name__ == "__main__":
+    app.run(debug=True, use_reloader=False)  #O modo debug facilita o desenvolvimento porque mostra erros detalhados e reinicia o servidor quando o código é alterado.
