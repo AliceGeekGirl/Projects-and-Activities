@@ -1,458 +1,725 @@
-#Importa o Flask para criar o servidor web, o jsonify para retornar respostas em JSON e o request para acessar os dados enviados pelo Frontend.
-from flask import Flask, jsonify, request, send_from_directory
+# IMPORTAÇÕES
 
+# Flask para criar o servidor web, jsonify para retornar JSON,
+# request para acessar os dados enviados pelo Frontend e
+# send_from_directory/send_file para disponibilizar arquivos.
+from flask import (
+    Flask,
+    jsonify,
+    request,
+    send_from_directory,
+    send_file
+)
+
+# Permite que o Frontend faça requisições para o Backend.
 from flask_cors import CORS
 
-#Importa a função que carrega as variáveis armazenadas no arquivo .env.
+# Carrega as variáveis armazenadas no arquivo .env.
 from dotenv import load_dotenv
 
-#Importa date para registrar automaticamente a data em que o contrato foi cadastrado.
+# Data para registrar automaticamente a data do cadastro.
 from datetime import date
 
-#Importa Path para trabalhar com caminhos de arquivos e criar a pasta de uploads.
+# Path para trabalhar com caminhos de arquivos.
 from pathlib import Path
 
-#Importa os para acessar variáveis de ambiente, como as configurações do .env.
+# Variáveis de ambiente.
 import os
 
-#Importa json para transformar a chave privada armazenada no .env em uma lista de números.
+# Converte a chave privada armazenada no .env.
 import json
 
-#Importa uuid para gerar identificadores únicos para os códigos e nomes dos arquivos.
+# Gera identificadores únicos.
 import uuid
 
-#Importa hashlib para calcular o hash SHA-256 dos arquivos enviados.
+# Calcula o hash SHA-256.
 import hashlib
 
-#Importa Keypair para reconstruir a carteira Solana a partir da chave privada.
+# Conexão com PostgreSQL.
+import psycopg
+
+# Carteira Solana.
 from solders.keypair import Keypair
 
-#Importa Pubkey para representar o endereço público de um programa ou carteira Solana.
+# Endereço público de programas/carteiras Solana.
 from solders.pubkey import Pubkey
 
-#Importa Instruction para criar a instrução que será enviada ao Memo Program.
+# Instrução enviada para o Memo Program.
 from solders.instruction import Instruction
 
-#Importa Message para montar a mensagem que fará parte da transação.
+# Mensagem da transação.
 from solders.message import Message
 
-#Importa Transaction para criar e assinar a transação Solana.
+# Transação Solana.
 from solders.transaction import Transaction
 
-#Importa AsyncClient para enviar requisições de forma assíncrona para a Solana Devnet.
+# Cliente assíncrono da Solana.
 from solana.rpc.async_api import AsyncClient
 
-#Carrega as variáveis de ambiente que estão no arquivo .env.
+# CONFIGURAÇÃO
+
+# Carrega as variáveis do arquivo .env.
 load_dotenv()
 
-#Cria a aplicação Flask.
+# Cria a aplicação Flask.
 app = Flask(__name__)
 
+# Permite requisições do Frontend durante o desenvolvimento.
 CORS(app)
 
-#Pega a URL de conexão do PostgreSQL armazenada no .env.
+# URL de conexão com o PostgreSQL.
 DATABASE_URL = os.getenv("DATABASE_URL")
 
-#Pega a URL da Solana Devnet armazenada no .env.
+# URL da Solana Devnet.
 SOLANA_RPC_URL = os.getenv("SOLANA_RPC_URL")
 
-#Define onde os arquivos PDF enviados serão armazenados.
-UPLOAD_FOLDER = Path("Backend/uploads")
+# Define a pasta do próprio projeto.
+# Isso evita depender do local de onde o comando Python foi executado.
+BASE_DIR = Path(__file__).resolve().parent.parent
 
-#Cria a pasta uploads caso ela ainda não exista.
+# Define a pasta onde os PDFs serão armazenados.
+UPLOAD_FOLDER = BASE_DIR / "Backend" / "uploads"
+
+# Cria a pasta caso ela ainda não exista.
 UPLOAD_FOLDER.mkdir(parents=True, exist_ok=True)
 
-#Define o tamanho máximo permitido para o arquivo enviado.
-app.config["MAX_CONTENT_LENGTH"] = 20 * 1024 * 1024 #Neste caso, o sistema permite arquivos de até 20 MB.
+# Limita o tamanho dos arquivos enviados para 20 MB.
+app.config["MAX_CONTENT_LENGTH"] = 20 * 1024 * 1024
 
-#Define o endereço oficial do Memo Program que receberá os dados que queremos registrar na transação da Solana.
+# Endereço oficial do Memo Program da Solana.
 MEMO_PROGRAM_ID = Pubkey.from_string(
     "MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr"
 )
 
-#Recupera a carteira Solana a partir da chave privada armazenada no .env. Essa função é usada sempre que o Backend precisa assinar uma transação antes de enviá-la para a Solana.
-def get_keypair():
+# FUNÇÕES AUXILIARES
 
-    #Pega a chave privada armazenada no arquivo .env.
+def get_keypair():
+    """
+    Recupera a carteira Solana a partir da chave privada
+    armazenada no arquivo .env.
+    """
+
+    # Pega a chave privada do .env.
     private_key_text = os.getenv("SOLANA_PRIVATE_KEY")
 
-    #Verifica se a chave privada foi configurada antes de tentar reconstruir a carteira Solana.
+    # Verifica se a chave foi configurada.
     if not private_key_text:
         raise ValueError(
             "SOLANA_PRIVATE_KEY não foi encontrada no .env."
         )
 
-    #Converte o texto JSON armazenado no .env para uma lista de números.
+    # Converte o texto JSON para uma lista de números.
     private_key = json.loads(private_key_text)
 
-    #Converte a lista de números para bytes e usa esses bytes para reconstruir exatamente a carteira Solana que será usada para assinar as transações.
+    # Reconstrói a carteira Solana.
     return Keypair.from_bytes(bytes(private_key))
 
-#Registra o código de verificação e o hash do contrato na Solana Devnet.
-#A função cria uma transação usando o Memo Program e retorna a assinatura da transação, que será armazenada posteriormente no PostgreSQL.
-async def register_on_solana(verification_code, file_hash):
 
-    #Cria uma conexão com a Solana Devnet. O bloco async with garante que a conexão seja fechada ao terminar.
+def generate_file_hash(file_data):
+    """
+    Calcula o hash SHA-256 do conteúdo de um arquivo.
+    """
+
+    return hashlib.sha256(file_data).hexdigest()
+
+
+def generate_verification_code():
+    """
+    Gera um código de verificação no formato:
+
+    PF-XXXXXXXX
+    """
+
+    return "PF-" + uuid.uuid4().hex[:8].upper()
+
+
+def generate_saved_filename(original_filename):
+    """
+    Cria um nome único para o arquivo armazenado.
+    """
+
+    return f"{uuid.uuid4().hex}_{original_filename}"
+
+
+async def register_on_solana(verification_code, file_hash):
+    """
+    Registra o código de verificação e o hash do contrato
+    na Solana Devnet usando o Memo Program.
+
+    O PDF não é enviado para a blockchain.
+    """
+
+    # Abre a conexão com a Solana.
     async with AsyncClient(SOLANA_RPC_URL) as client:
 
-        #Recupera a carteira que será usada para assinar a transação.
+        # Recupera a carteira usada para assinar a transação.
         keypair = get_keypair()
 
-        #Monta o texto que será registrado pelo Memo Program. O código identifica o registro e o hash identifica o conteúdo do contrato.
+        # Monta o conteúdo do Memo.
         memo_data = (
-            f"PROOFFILE|{verification_code}|HASH:{file_hash}" #O PDF em si não será enviado para a blockchain.
+            f"PROOFFILE|{verification_code}|HASH:{file_hash}"
         )
 
-        #Cria uma instrução para o Memo Program contendo o código de verificação e o hash do contrato.
+        # Cria a instrução do Memo Program.
         instruction = Instruction(
             program_id=MEMO_PROGRAM_ID,
             accounts=[],
             data=memo_data.encode("utf-8")
         )
 
-        #Busca um blockhash recente, que é necessário para criar uma transação válida na rede Solana.
+        # Busca um blockhash recente.
         blockhash_response = await client.get_latest_blockhash()
 
-        #Pega o blockhash retornado pela Solana.
         recent_blockhash = blockhash_response.value.blockhash
 
-        #Monta a mensagem da transação usando a instrução do Memo, a carteira que está assinando e o blockhash obtido recentemente.
+        # Cria a mensagem da transação.
         message = Message.new_with_blockhash(
             [instruction],
             keypair.pubkey(),
             recent_blockhash
         )
 
-        #Cria a transação usando a mensagem preparada anteriormente. A Keypair fornece a assinatura digital necessária para provar que essa carteira autorizou o envio da transação.
+        # Cria e assina a transação.
         transaction = Transaction(
             [keypair],
             message,
             recent_blockhash
         )
 
-        #Envia a transação assinada para a Solana Devnet.
+        # Envia a transação para a Solana Devnet.
         response = await client.send_transaction(transaction)
 
-        #Retorna a assinatura que identifica a transação na blockchain.
+        # Retorna a assinatura da transação.
         return str(response.value)
 
-#Cria a rota /db para testar se o Backend consegue se conectar corretamente ao banco de dados PostgreSQL.
+
+def validate_pdf(file):
+    """
+    Faz uma validação básica para o MVP.
+
+    Verifica:
+    - se existe arquivo;
+    - se o nome não está vazio;
+    - se a extensão é .pdf.
+    """
+
+    if file is None:
+        return "Nenhum arquivo foi enviado."
+
+    if file.filename == "":
+        return "Nenhum arquivo foi selecionado."
+
+    if not file.filename.lower().endswith(".pdf"):
+        return "Apenas arquivos PDF são permitidos."
+
+    return None
+
+# ROTA DE TESTE DO BANCO
+
 @app.route("/db")
-
-#Testa a conexão entre o Backend e o PostgreSQL executando uma consulta simples. Essa função é usada apenas para verificar se a comunicação com o banco está funcionando corretamente.
 def test_database():
+    """
+    Testa se o Backend consegue se conectar ao PostgreSQL.
+    """
 
-    #Importa o psycopg, que permite que o Python se comunique com o PostgreSQL.
-    import psycopg
+    try:
+        with psycopg.connect(DATABASE_URL) as conn:
+            with conn.cursor() as cur:
 
-    #Abre uma conexão com o PostgreSQL usando a URL armazenada no .env.
-    conn = psycopg.connect(DATABASE_URL)
+                cur.execute("SELECT 1;")
 
-    #Cria um cursor para executar comandos SQL no banco.
-    cur = conn.cursor()
+                result = cur.fetchone()
 
-    #Executa uma consulta simples apenas para verificar se a conexão com o banco de dados está funcionando.
-    cur.execute("SELECT 1;")
+        return jsonify({
+            "database": "connected",
+            "result": result[0]
+        })
 
-    #Pega o resultado retornado pela consulta.
-    result = cur.fetchone()
+    except Exception as error:
 
-    #Fecha o cursor depois de terminar a consulta.
-    cur.close()
+        print(f"ERRO NO BANCO: {error}")
 
-    #Fecha a conexão com o PostgreSQL.
-    conn.close()
+        return jsonify({
+            "error": "Não foi possível conectar ao banco de dados."
+        }), 500
 
-    #Retorna o resultado em JSON para confirmar que o banco está funcionando.
-    return jsonify(result)
+# ROTA DE TESTE DO HASH
 
-#Cria a rota /hash para receber um arquivo enviado pelo Frontend e gerar o hash SHA-256 desse arquivo.
-@app.route("/hash", methods=["POST"]) #O método POST é usado porque estamos enviando um arquivo para o Backend.
-
-#Recebe um arquivo enviado pelo Frontend e calcula seu hash SHA-256. Essa função foi criada inicialmente para testar o funcionamento do hash antes de integrá-lo ao cadastro completo do contrato.
+@app.route("/hash", methods=["POST"])
 def generate_hash():
+    """
+    Recebe um arquivo e retorna seu hash SHA-256.
 
-    #Verifica se o formulário recebeu um arquivo.
-    if "file" not in request.files:
-        return "Nenhum arquivo foi enviado.", 400
+    Essa rota foi usada para testar o funcionamento do hash
+    antes da integração com o cadastro completo.
+    """
 
-    #Pega o arquivo enviado pelo usuário.
-    file = request.files["file"]
+    # Verifica se o arquivo é válido.
+    file = request.files.get("file")
 
-    #Lê o conteúdo do arquivo em bytes para que ele possa ser processado.
+    validation_error = validate_pdf(file)
+
+    if validation_error:
+        return jsonify({
+            "error": validation_error
+        }), 400
+
+    # Lê o conteúdo do arquivo.
     file_data = file.read()
 
-    #Calcula o hash SHA-256 do conteúdo do arquivo.
-    file_hash = hashlib.sha256(file_data).hexdigest() #Esse valor funciona como uma identificação matemática do conteúdo do PDF.
+    # Calcula o hash.
+    file_hash = generate_file_hash(file_data)
 
-    #Retorna o nome e o hash do arquivo em formato JSON.
     return jsonify({
         "file_name": file.filename,
         "file_hash": file_hash
     })
 
-#Cria a rota /register para realizar o cadastro completo de um contrato.
-#Essa rota recebe o PDF e os dados do contrato, calcula o hash, registra a informação na Solana e salva os dados no PostgreSQL.
-@app.route("/register", methods=["POST"]) #O método POST é usado porque estamos enviando dados para criar um novo registro.
+# ROTA DE REGISTRO
 
-#Realiza o cadastro completo de um contrato no ProofFile. A função recebe o PDF, calcula seu hash, gera o código de verificação, registra o hash na Solana, salva o arquivo e registra os dados no PostgreSQL.
+@app.route("/register", methods=["POST"])
 async def register_contract():
+    """
+    Realiza o cadastro completo de um contrato.
 
-    #Importa o psycopg usado para permitir que o Python execute comandos no PostgreSQL.
-    import psycopg
+    Fluxo:
 
-    #Verifica se o formulário recebeu um arquivo.
-    if "file" not in request.files:
+    PDF
+      ↓
+    SHA-256
+      ↓
+    Código de verificação
+      ↓
+    Solana Memo
+      ↓
+    PostgreSQL
+    """
+
+    # 1. VALIDAÇÃO DO ARQUIVO
+
+    file = request.files.get("file")
+
+    validation_error = validate_pdf(file)
+
+    if validation_error:
         return jsonify({
-            "error": "Nenhum arquivo foi enviado."
+            "error": validation_error
         }), 400
 
-    #Pega o arquivo enviado pelo usuário.
-    file = request.files["file"]
+    # 2. VALIDAÇÃO DO NOME DO CONTRATO
 
-    #Verifica se o usuário realmente selecionou um arquivo.
-    if file.filename == "":
-        return jsonify({
-            "error": "Nenhum arquivo foi selecionado."
-        }), 400
+    contract_name = request.form.get("contract_name", "").strip()
 
-    #Pega o nome ou identificação do contrato enviado pelo formulário.
-    contract_name = request.form.get("contract_name")
-
-    # Verifica se o nome do contrato foi informado.
     if not contract_name:
         return jsonify({
             "error": "O nome do contrato é obrigatório."
         }), 400
 
-    #Pega a data de expiração caso o usuário tenha informado uma.
-    expiration_date = request.form.get("expiration_date") #Caso contrário, o valor será vazio e depois será salvo como NULL.
+    # 3. DATA DE EXPIRAÇÃO
 
-    #Lê o conteúdo do PDF antes de salvá-lo.
+    expiration_date = request.form.get(
+        "expiration_date",
+        ""
+    ).strip()
+
+    if not expiration_date:
+        expiration_date = None
+
+    # 4. LEITURA DO ARQUIVO
+
     file_data = file.read()
 
-    #Calcula o hash SHA-256 do conteúdo do PDF.
-    file_hash = hashlib.sha256(file_data).hexdigest() #Esse hash será usado como representação matemática do conteúdo do contrato e também será registrado na Solana.
+    if not file_data:
+        return jsonify({
+            "error": "O arquivo enviado está vazio."
+        }), 400
 
-    #Gera um código único que será entregue ao cliente.
-    verification_code = (
-        "PF-" + uuid.uuid4().hex[:8].upper() #Esse código permitirá localizar posteriormente o registro correspondente no PostgreSQL.
-    )
+    # 5. VALIDAÇÃO BÁSICA DO PDF
 
-    #Cria um nome único para o arquivo armazenado.
-    saved_filename = (
-        f"{uuid.uuid4().hex}_{file.filename}" #O UUID evita que dois contratos com o mesmo nome sobrescrevam um arquivo que já esteja na pasta uploads.
-    )
+    # PDFs normalmente começam com %PDF.
+    if not file_data.startswith(b"%PDF"):
+        return jsonify({
+            "error": "O arquivo enviado não parece ser um PDF válido."
+        }), 400
 
-    #Define o caminho onde o PDF será armazenado.
-    file_path = UPLOAD_FOLDER / saved_filename
+    # 6. GERAÇÃO DO HASH
 
-    #Salva o PDF dentro da pasta uploads.
-    file_path.write_bytes(file_data)
+    file_hash = generate_file_hash(file_data)
+
+    # 7. VERIFICA SE O HASH JÁ EXISTE
 
     try:
-        #Registra primeiro o hash e o código na Solana.
-        #Fazemos isso antes do INSERT no PostgreSQL porque a coluna solana_transaction é obrigatória e precisa receber a assinatura real da transação, e não mais o valor temporário PENDING_SOLANA.
+
+        with psycopg.connect(DATABASE_URL) as conn:
+            with conn.cursor() as cur:
+
+                cur.execute(
+                    """
+                    SELECT verification_code
+                    FROM contracts
+                    WHERE file_hash = %s;
+                    """,
+                    (file_hash,)
+                )
+
+                existing_contract = cur.fetchone()
+
+        if existing_contract:
+
+            return jsonify({
+                "error": (
+                    "Este arquivo já foi registrado no ProofFile."
+                ),
+                "verification_code": existing_contract[0]
+            }), 409
+
+    except Exception as error:
+
+        print(
+            f"ERRO AO VERIFICAR HASH EXISTENTE: {error}"
+        )
+
+        return jsonify({
+            "error": (
+                "Não foi possível verificar se o contrato "
+                "já foi registrado."
+            )
+        }), 500
+
+    # 8. GERA CÓDIGO DE VERIFICAÇÃO
+
+    verification_code = generate_verification_code()
+
+    # 9. GERA NOME DO ARQUIVO
+
+    saved_filename = generate_saved_filename(
+        file.filename
+    )
+
+    file_path = UPLOAD_FOLDER / saved_filename
+
+    # 10. SALVA O ARQUIVO
+
+    try:
+
+        file_path.write_bytes(file_data)
+
+    except Exception as error:
+
+        print(
+            f"ERRO AO SALVAR ARQUIVO: {error}"
+        )
+
+        return jsonify({
+            "error": "Não foi possível salvar o arquivo."
+        }), 500
+
+    # 11. REGISTRA NA SOLANA
+
+    try:
+
         solana_transaction = await register_on_solana(
             verification_code,
             file_hash
         )
 
-        #Abre a conexão com o PostgreSQL somente depois que a transação da Solana foi criada com sucesso.
-        conn = psycopg.connect(DATABASE_URL)
+    except Exception as error:
 
-        #Cria um cursor para executar o INSERT do contrato.
-        cur = conn.cursor()
+        # Se a Solana falhar, remove o arquivo que acabou
+        # de ser salvo para evitar um arquivo órfão.
+        if file_path.exists():
+            file_path.unlink()
 
-        #Insere o contrato usando os IDs de teste que já existem nas tabelas users e companies.
-        #Nesta etapa do MVP ainda estamos usando esses registros fixos para testar a integração do cadastro.
-        cur.execute(
-            """
-            INSERT INTO contracts (
-                verification_code,
-                contract_name,
-                company_id,
-                user_id,
-                registration_date,
-                expiration_date,
-                file_path,
-                file_hash,
-                solana_transaction
-            )
-            VALUES (
-                %s, %s, %s, %s, %s, %s, %s, %s, %s
-            )
-            RETURNING id;
-            """,
-            (
-                verification_code,
-                contract_name,
-                1,
-                1,
-                date.today(),
-                expiration_date if expiration_date else None,
-                str(file_path),
-                file_hash,
-                solana_transaction
-            )
+        print(
+            f"ERRO AO REGISTRAR NA SOLANA: {error}"
         )
 
-        #Pega o ID gerado pelo PostgreSQL para identificar o novo contrato cadastrado.
-        contract_id = cur.fetchone()[0]
-
-        #Confirma definitivamente o INSERT no banco.
-        conn.commit()
-
-        #Fecha o cursor depois de terminar a operação.
-        cur.close()
-
-        #Fecha a conexão com o PostgreSQL.
-        conn.close()
-        
-    except Exception as error:
-        # Mostra o erro completo no terminal do Flask.
-        # Isso permite identificar exatamente qual etapa do cadastro falhou.
-        print(f"ERRO NO REGISTRO: {error}")
-
-        # Retorna o erro também para o Frontend em formato JSON.
         return jsonify({
-            "error": str(error)
+            "error": (
+                "Não foi possível registrar o contrato "
+                "na Solana."
+            )
         }), 500
 
-    #Retorna os dados principais do registro para que o Frontend possa mostrar ao usuário que o contrato foi registrado, incluindo o código de verificação e a assinatura da transação Solana.
+    # 12. SALVA NO POSTGRESQL
+
+    registration_date = date.today()
+
+    try:
+
+        with psycopg.connect(DATABASE_URL) as conn:
+
+            with conn.cursor() as cur:
+
+                cur.execute(
+                    """
+                    INSERT INTO contracts (
+                        verification_code,
+                        contract_name,
+                        company_id,
+                        user_id,
+                        registration_date,
+                        expiration_date,
+                        file_path,
+                        file_hash,
+                        solana_transaction
+                    )
+                    VALUES (
+                        %s, %s, %s, %s, %s,
+                        %s, %s, %s, %s
+                    )
+                    RETURNING id;
+                    """,
+                    (
+                        verification_code,
+                        contract_name,
+                        1,
+                        1,
+                        registration_date,
+                        expiration_date,
+                        str(file_path),
+                        file_hash,
+                        solana_transaction
+                    )
+                )
+
+                contract_id = cur.fetchone()[0]
+
+    except psycopg.errors.UniqueViolation:
+
+        # Se por algum motivo o banco detectar um conflito,
+        # remove o arquivo salvo.
+        if file_path.exists():
+            file_path.unlink()
+
+        print(
+            "ERRO NO REGISTRO: conflito de registro único."
+        )
+
+        return jsonify({
+            "error": (
+                "O contrato já possui um registro "
+                "ou ocorreu um conflito de código."
+            )
+        }), 409
+
+    except Exception as error:
+
+        # Remove o arquivo para evitar deixar um PDF
+        # sem registro correspondente no banco.
+        if file_path.exists():
+            file_path.unlink()
+
+        print(
+            f"ERRO AO SALVAR NO POSTGRESQL: {error}"
+        )
+
+        return jsonify({
+            "error": (
+                "Não foi possível salvar o registro "
+                "no banco de dados."
+            )
+        }), 500
+
+    # 13. RETORNA RESULTADO
+
     return jsonify({
         "message": "Registro concluído!",
         "contract_id": contract_id,
         "verification_code": verification_code,
         "contract_name": contract_name,
-        "registration_date": str(date.today()),
+        "registration_date": str(registration_date),
         "expiration_date": expiration_date,
         "file_hash": file_hash,
         "solana_transaction": solana_transaction
     }), 201
 
-#Cria a rota /contract/<verification_code> para buscar um contrato usando o código de verificação informado na URL.
-#Essa rota utiliza o método GET, que é o comportamento padrão do Flask, porque estamos apenas consultando informações que já estão cadastradas.
+# CONSULTA DE CONTRATO PELO CÓDIGO
+
 @app.route("/contract/<verification_code>")
-
-#Busca no PostgreSQL os dados de um contrato usando seu código de verificação. Essa função será utilizada posteriormente pelo processo de verificação para localizar o registro original do contrato.
 def get_contract_by_code(verification_code):
-    
-    #Importa o psycopg para permitir que o Python consulte o PostgreSQL.
-    import psycopg
+    """
+    Busca informações de um contrato usando seu código
+    de verificação.
+    """
 
-    #Abre uma conexão com o banco.
-    conn = psycopg.connect(DATABASE_URL)
+    try:
 
-    #Cria um cursor para executar a consulta SQL.
-    cur = conn.cursor()
+        with psycopg.connect(DATABASE_URL) as conn:
 
-    #Busca o contrato usando o código de verificação informado.
-    #Os INNER JOINs permitem recuperar também os dados relacionados ao usuário e à empresa responsáveis pelo registro.
-    cur.execute(
-        """
-        SELECT
-            ct.contract_name,
-            cm.company_name,
-            u.name,
-            u.email,
-            ct.registration_date,
-            ct.expiration_date,
-            ct.file_path,
-            ct.file_hash,
-            ct.solana_transaction
-        FROM contracts AS ct
-        INNER JOIN users AS u
-            ON ct.user_id = u.id
-        INNER JOIN companies AS cm
-            ON ct.company_id = cm.id
-        WHERE ct.verification_code = %s;
-        """,
-        (verification_code,)
-    )
+            with conn.cursor() as cur:
 
-    #Pega o primeiro resultado encontrado.
-    result = cur.fetchone()
+                cur.execute(
+                    """
+                    SELECT
+                        ct.contract_name,
+                        cm.company_name,
+                        u.name,
+                        u.email,
+                        ct.registration_date,
+                        ct.expiration_date,
+                        ct.file_path,
+                        ct.file_hash,
+                        ct.solana_transaction
+                    FROM contracts AS ct
+                    INNER JOIN users AS u
+                        ON ct.user_id = u.id
+                    INNER JOIN companies AS cm
+                        ON ct.company_id = cm.id
+                    WHERE ct.verification_code = %s;
+                    """,
+                    (verification_code,)
+                )
 
-    #Fecha o cursor depois da consulta.
-    cur.close()
+                result = cur.fetchone()
 
-    #Fecha a conexão com o PostgreSQL.
-    conn.close()
+        if result is None:
 
-    #Informa que o contrato não existe caso nenhum registro seja encontrado.
-    if result is None:
-        return "Contrato não encontrado.", 404
+            return jsonify({
+                "error": "Contrato não encontrado."
+            }), 404
 
-    #Retorna os dados encontrados em formato JSON.
-    return jsonify(result)
+        (
+            contract_name,
+            company_name,
+            user_name,
+            user_email,
+            registration_date,
+            expiration_date,
+            file_path,
+            file_hash,
+            solana_transaction
+        ) = result
+
+        return jsonify({
+            "contract_name": contract_name,
+            "company_name": company_name,
+            "user_name": user_name,
+            "user_email": user_email,
+            "registration_date": str(registration_date),
+            "expiration_date": (
+                str(expiration_date)
+                if expiration_date
+                else None
+            ),
+            "file_path": file_path,
+            "file_hash": file_hash,
+            "solana_transaction": solana_transaction
+        })
+
+    except Exception as error:
+
+        print(
+            f"ERRO AO CONSULTAR CONTRATO: {error}"
+        )
+
+        return jsonify({
+            "error": (
+                "Não foi possível consultar o contrato."
+            )
+        }), 500
+
+# ROTA DE VERIFICAÇÃO
 
 @app.route("/verify", methods=["POST"])
 async def verify_contract():
-    import psycopg
+    """
+    Verifica se o PDF enviado corresponde ao PDF
+    originalmente registrado.
 
-    # Verifica se o código foi enviado.
-    verification_code = request.form.get("verification_code")
+    Fluxo:
+
+    PDF recebido
+         ↓
+    SHA-256
+         ↓
+    Busca pelo código
+         ↓
+    Compara hashes
+         ↓
+    Resultado
+    """
+
+    # 1. CÓDIGO DE VERIFICAÇÃO
+
+    verification_code = request.form.get(
+        "verification_code",
+        ""
+    ).strip()
 
     if not verification_code:
+
         return jsonify({
-            "error": "O código de verificação é obrigatório."
+            "error": (
+                "O código de verificação é obrigatório."
+            )
         }), 400
 
-    # Verifica se um arquivo foi enviado.
-    if "file" not in request.files:
+    # 2. ARQUIVO
+
+    file = request.files.get("file")
+
+    validation_error = validate_pdf(file)
+
+    if validation_error:
+
         return jsonify({
-            "error": "Nenhum arquivo foi enviado."
+            "error": validation_error
         }), 400
 
-    file = request.files["file"]
+    # 3. LEITURA DO ARQUIVO
 
-    if file.filename == "":
-        return jsonify({
-            "error": "Nenhum arquivo foi selecionado."
-        }), 400
-
-    # Lê o arquivo enviado pelo cliente.
     file_data = file.read()
 
-    # Calcula o hash do arquivo recebido.
-    file_hash = hashlib.sha256(file_data).hexdigest()
+    if not file_data:
+
+        return jsonify({
+            "error": "O arquivo enviado está vazio."
+        }), 400
+
+    # 4. HASH DO ARQUIVO RECEBIDO
+
+    file_hash = generate_file_hash(file_data)
+
+    # 5. BUSCA O REGISTRO
 
     try:
-        conn = psycopg.connect(DATABASE_URL)
-        cur = conn.cursor()
 
-        # Busca o contrato pelo código de verificação.
-        cur.execute(
-            """
-            SELECT
-                ct.contract_name,
-                cm.company_name,
-                u.name,
-                ct.registration_date,
-                ct.expiration_date,
-                ct.file_path,
-                ct.file_hash,
-                ct.solana_transaction
-            FROM contracts AS ct
-            INNER JOIN users AS u
-                ON ct.user_id = u.id
-            INNER JOIN companies AS cm
-                ON ct.company_id = cm.id
-            WHERE ct.verification_code = %s;
-            """,
-            (verification_code,)
-        )
+        with psycopg.connect(DATABASE_URL) as conn:
 
-        result = cur.fetchone()
+            with conn.cursor() as cur:
 
-        cur.close()
-        conn.close()
+                cur.execute(
+                    """
+                    SELECT
+                        ct.contract_name,
+                        cm.company_name,
+                        u.name,
+                        ct.registration_date,
+                        ct.expiration_date,
+                        ct.file_path,
+                        ct.file_hash,
+                        ct.solana_transaction
+                    FROM contracts AS ct
+                    INNER JOIN users AS u
+                        ON ct.user_id = u.id
+                    INNER JOIN companies AS cm
+                        ON ct.company_id = cm.id
+                    WHERE ct.verification_code = %s;
+                    """,
+                    (verification_code,)
+                )
 
-        # Código não encontrado.
+                result = cur.fetchone()
+
+        # Código inexistente.
         if result is None:
+
             return jsonify({
-                "error": "Código de verificação não encontrado."
+                "error": (
+                    "Código de verificação "
+                    "não encontrado."
+                )
             }), 404
 
         (
@@ -466,16 +733,19 @@ async def verify_contract():
             solana_transaction
         ) = result
 
-        # Compara o hash do arquivo recebido
-        # com o hash registrado originalmente.
+        # 6. COMPARAÇÃO
+
         matches = file_hash == registered_hash
+
+        # 7. RESULTADO
 
         return jsonify({
             "verified": matches,
             "message": (
                 "O contrato corresponde ao registro."
                 if matches
-                else "O contrato não corresponde ao registro."
+                else
+                "O contrato não corresponde ao registro."
             ),
             "verification_code": verification_code,
             "contract_name": contract_name,
@@ -492,68 +762,135 @@ async def verify_contract():
         }), 200
 
     except Exception as error:
-        print(f"ERRO NA VERIFICAÇÃO: {error}")
+
+        print(
+            f"ERRO NA VERIFICAÇÃO: {error}"
+        )
 
         return jsonify({
-            "error": str(error)
+            "error": (
+                "Não foi possível realizar "
+                "a verificação."
+            )
         }), 500
+
+# ACESSO AO PDF REGISTRADO
 
 @app.route("/contract-file/<verification_code>")
 def get_contract_file(verification_code):
-    import psycopg
-    from flask import send_file
+    """
+    Retorna o PDF originalmente registrado.
+    """
 
-    conn = psycopg.connect(DATABASE_URL)
-    cur = conn.cursor()
+    try:
 
-    cur.execute(
-        """
-        SELECT file_path
-        FROM contracts
-        WHERE verification_code = %s;
-        """,
-        (verification_code,)
-    )
+        with psycopg.connect(DATABASE_URL) as conn:
 
-    result = cur.fetchone()
+            with conn.cursor() as cur:
 
-    cur.close()
-    conn.close()
+                cur.execute(
+                    """
+                    SELECT file_path
+                    FROM contracts
+                    WHERE verification_code = %s;
+                    """,
+                    (verification_code,)
+                )
 
-    if result is None:
-        return "Contrato não encontrado.", 404
+                result = cur.fetchone()
 
-    file_path = Path(result[0])
+        if result is None:
 
-    if not file_path.exists():
-        return "Arquivo do contrato não encontrado.", 404
+            return jsonify({
+                "error": "Contrato não encontrado."
+            }), 404
 
-    return send_file(
-        file_path,
-        mimetype="application/pdf"
-    )
+        file_path = Path(result[0])
+
+        # Verifica se o arquivo realmente existe.
+        if not file_path.exists():
+
+            return jsonify({
+                "error": (
+                    "Arquivo do contrato "
+                    "não encontrado."
+                )
+            }), 404
+
+        return send_file(
+            file_path,
+            mimetype="application/pdf"
+        )
+
+    except Exception as error:
+
+        print(
+            f"ERRO AO ABRIR CONTRATO: {error}"
+        )
+
+        return jsonify({
+            "error": (
+                "Não foi possível abrir "
+                "o contrato."
+            )
+        }), 500
+
+# PÁGINA DE TESTE - VERIFICAÇÃO
 
 @app.route("/verify-test.html")
 def verify_test():
-    frontend_folder = (
-        Path(__file__).resolve().parent.parent
-        / "Frontend"
-    )
+    """
+    Disponibiliza a página de teste da verificação.
+    """
+
+    frontend_folder = BASE_DIR / "Frontend"
 
     return send_from_directory(
         frontend_folder,
         "verify-test.html"
     )
 
+# PÁGINA DE TESTE - REGISTRO
+
 @app.route("/register-test.html")
 def register_test():
-    frontend_folder = Path(__file__).resolve().parent.parent / "Frontend"
+    """
+    Disponibiliza a página de teste do registro.
+    """
+
+    frontend_folder = BASE_DIR / "Frontend"
 
     return send_from_directory(
         frontend_folder,
         "register-test.html"
     )
 
-#Verifica se este arquivo app.py está sendo executado diretamente pelo Python. Essa condição evita que o servidor seja iniciado automaticamente caso o arquivo seja importado por outro arquivo do projeto
+# TRATAMENTO DE ARQUIVO GRANDE
+
+@app.errorhandler(413)
+def file_too_large(error):
+    """
+    Retorna uma mensagem amigável quando o arquivo
+    ultrapassa o limite de 20 MB.
+    """
+
+    return jsonify({
+        "error": (
+            "O arquivo é muito grande. "
+            "O tamanho máximo permitido é 20 MB."
+        )
+    }), 413
+
+# INICIALIZAÇÃO
+
 if __name__ == "__main__":
-    app.run(debug=True, use_reloader=False)  #O modo debug facilita o desenvolvimento porque mostra erros detalhados e reinicia o servidor quando o código é alterado.
+
+    # O debug facilita o desenvolvimento.
+    #
+    # use_reloader=False evita que o Flask reinicie
+    # automaticamente quando um PDF é criado dentro
+    # da pasta Backend/uploads.
+    app.run(
+        debug=True,
+        use_reloader=False
+    )
