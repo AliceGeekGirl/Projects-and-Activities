@@ -1,7 +1,289 @@
-// =========================
-// REGISTRO DE CONTRATO
-// =========================
+const BACKEND_URL = "http://127.0.0.1:5000";
 
+
+/*
+ * Cria o link para a transação da Solana.
+ *
+ * O Backend retorna apenas a assinatura da transação.
+ * Aqui transformamos essa assinatura em um link
+ * para o Solana Explorer da Devnet.
+ */
+function createSolanaExplorerUrl(transaction) {
+
+    if (!transaction) {
+        return null;
+    }
+
+    return `https://explorer.solana.com/tx/${transaction}?cluster=devnet`;
+}
+
+
+/*
+ * Formata uma data recebida pelo Backend.
+ *
+ * Exemplo:
+ * 2026-10-07 → 07/10/2026
+ */
+function formatDate(date) {
+
+    if (!date) {
+        return "Não informada";
+    }
+
+    const parts = date.split("-");
+
+    if (parts.length !== 3) {
+        return date;
+    }
+
+    return `${parts[2]}/${parts[1]}/${parts[0]}`;
+}
+
+
+/*
+ * Cria o HTML com as informações do contrato.
+ */
+function contractDetails(data) {
+
+    return `
+        <div class="result-details">
+
+            <div class="detail-item">
+                <span>Contrato</span>
+                <strong>${data.contract_name}</strong>
+            </div>
+
+            ${
+                data.company_name
+                    ? `
+                    <div class="detail-item">
+                        <span>Empresa</span>
+                        <strong>${data.company_name}</strong>
+                    </div>
+                    `
+                    : ""
+            }
+
+            <div class="detail-item">
+                <span>Código de verificação</span>
+                <strong>${data.verification_code}</strong>
+            </div>
+
+            <div class="detail-item">
+                <span>Data de registro</span>
+                <strong>${formatDate(data.registration_date)}</strong>
+            </div>
+
+            ${
+                data.expiration_date
+                    ? `
+                    <div class="detail-item">
+                        <span>Data de término</span>
+                        <strong>${formatDate(data.expiration_date)}</strong>
+                    </div>
+                    `
+                    : ""
+            }
+
+        </div>
+    `;
+}
+
+
+/*
+ * Cria o link para o contrato registrado.
+ */
+function contractFileLink(verificationCode) {
+
+    if (!verificationCode) {
+        return "";
+    }
+
+    const url =
+        `${BACKEND_URL}/contract-file/${verificationCode}`;
+
+    return `
+        <a
+            href="${url}"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="secondary-button"
+        >
+            Ver contrato registrado
+        </a>
+    `;
+}
+
+
+/*
+ * Cria o link para a transação na Solana.
+ */
+function solanaLink(transaction) {
+
+    const url = createSolanaExplorerUrl(transaction);
+
+    if (!url) {
+        return "";
+    }
+
+    return `
+        <a
+            href="${url}"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="blockchain-link"
+        >
+            Ver registro na Solana
+        </a>
+    `;
+}
+
+
+/*
+ * Mostra o resultado do REGISTRO.
+ */
+function showRegisterSuccess(data) {
+
+    const result = document.getElementById("registerResult");
+    const formCard = document.getElementById("registerCard");
+
+    result.hidden = false;
+
+    result.innerHTML = `
+        <div class="result-icon">
+            ✓
+        </div>
+
+        <h2>
+            ${data.message}
+        </h2>
+
+        <p class="result-description">
+            Seu contrato foi registrado com sucesso.
+            Guarde o código de verificação para futuras consultas.
+        </p>
+
+        <div class="verification-code-box">
+
+            <span>
+                Código de verificação
+            </span>
+
+            <strong>
+                ${data.verification_code}
+            </strong>
+
+        </div>
+
+        ${contractDetails(data)}
+
+        <div class="result-actions">
+
+            ${contractFileLink(data.verification_code)}
+
+            ${solanaLink(data.solana_transaction)}
+
+        </div>
+    `;
+
+    formCard.hidden = true;
+
+    result.scrollIntoView({
+        behavior: "smooth",
+        block: "start"
+    });
+}
+
+
+/*
+ * Mostra o resultado da VERIFICAÇÃO.
+ */
+function showVerifyResult(data) {
+
+    const result = document.getElementById("verifyResult");
+    const formCard = document.getElementById("verifyCard");
+
+    result.hidden = false;
+
+    const isVerified = data.verified;
+
+    result.className =
+        `result-card ${
+            isVerified
+                ? "verified-result"
+                : "invalid-result"
+        }`;
+
+    result.innerHTML = `
+        <div class="result-icon">
+            ${isVerified ? "✓" : "!"}
+        </div>
+
+        <h2>
+            ${data.message}
+        </h2>
+
+        <p class="result-description">
+            ${
+                isVerified
+                    ? "O arquivo enviado corresponde ao contrato originalmente registrado."
+                    : "O arquivo enviado possui um conteúdo diferente do contrato originalmente registrado."
+            }
+        </p>
+
+        ${contractDetails(data)}
+
+        <div class="result-actions">
+
+            ${contractFileLink(data.verification_code)}
+
+            ${solanaLink(data.solana_transaction)}
+
+        </div>
+    `;
+
+    formCard.hidden = true;
+
+    result.scrollIntoView({
+        behavior: "smooth",
+        block: "start"
+    });
+}
+
+
+/*
+ * Mostra uma mensagem de erro.
+ */
+function showError(result, message) {
+
+    result.hidden = false;
+
+    result.className = "result-card error-result";
+
+    result.innerHTML = `
+        <div class="result-icon">
+            !
+        </div>
+
+        <h2>
+            Não foi possível concluir a operação.
+        </h2>
+
+        <p class="result-description">
+            ${message}
+        </p>
+    `;
+
+    result.scrollIntoView({
+        behavior: "smooth",
+        block: "start"
+    });
+}
+
+
+/*
+ * REGISTRO DE CONTRATO
+ */
 const registerForm = document.getElementById("registerForm");
 
 if (registerForm) {
@@ -10,20 +292,23 @@ if (registerForm) {
 
         event.preventDefault();
 
-        const button = document.getElementById("registerButton");
-        const result = document.getElementById("registerResult");
+        const button =
+            document.getElementById("registerButton");
+
+        const result =
+            document.getElementById("registerResult");
 
         const formData = new FormData(registerForm);
 
         button.disabled = true;
-        button.textContent = "Registrando...";
+        button.textContent = "Registrando contrato...";
 
         result.hidden = true;
 
         try {
 
             const response = await fetch(
-                "http://127.0.0.1:5000/register",
+                `${BACKEND_URL}/register`,
                 {
                     method: "POST",
                     body: formData
@@ -34,46 +319,37 @@ if (registerForm) {
 
             if (!response.ok) {
 
-                showResult(
+                showError(
                     result,
-                    "error",
-                    "Não foi possível registrar o contrato.",
-                    data.error || "Ocorreu um erro inesperado."
+                    data.error || "Ocorreu um erro ao registrar o contrato."
                 );
+
+                button.disabled = false;
+                button.textContent = "Registrar contrato";
 
                 return;
             }
 
-
-            showRegisterSuccess(result, data);
-
-            registerForm.reset();
+            showRegisterSuccess(data);
 
         } catch (error) {
 
-            showResult(
+            showError(
                 result,
-                "error",
-                "Erro ao conectar com o ProofFile.",
-                "Verifique se o backend está em execução."
+                "Não foi possível conectar ao Backend."
             );
-
-        } finally {
 
             button.disabled = false;
             button.textContent = "Registrar contrato";
-
         }
 
     });
-
 }
 
 
-// =========================
-// VERIFICAÇÃO DE CONTRATO
-// =========================
-
+/*
+ * VERIFICAÇÃO DE CONTRATO
+ */
 const verifyForm = document.getElementById("verifyForm");
 
 if (verifyForm) {
@@ -82,20 +358,23 @@ if (verifyForm) {
 
         event.preventDefault();
 
-        const button = document.getElementById("verifyButton");
-        const result = document.getElementById("verifyResult");
+        const button =
+            document.getElementById("verifyButton");
+
+        const result =
+            document.getElementById("verifyResult");
 
         const formData = new FormData(verifyForm);
 
         button.disabled = true;
-        button.textContent = "Verificando...";
+        button.textContent = "Verificando contrato...";
 
         result.hidden = true;
 
         try {
 
             const response = await fetch(
-                "http://127.0.0.1:5000/verify",
+                `${BACKEND_URL}/verify`,
                 {
                     method: "POST",
                     body: formData
@@ -104,262 +383,31 @@ if (verifyForm) {
 
             const data = await response.json();
 
-
             if (!response.ok) {
 
-                showResult(
+                showError(
                     result,
-                    "error",
-                    "Não foi possível verificar o contrato.",
-                    data.error || "Ocorreu um erro inesperado."
+                    data.error || "Ocorreu um erro ao verificar o contrato."
                 );
+
+                button.disabled = false;
+                button.textContent = "Verificar contrato";
 
                 return;
             }
 
-
-            showVerifyResult(result, data);
+            showVerifyResult(data);
 
         } catch (error) {
 
-            showResult(
+            showError(
                 result,
-                "error",
-                "Erro ao conectar com o ProofFile.",
-                "Verifique se o backend está em execução."
+                "Não foi possível conectar ao Backend."
             );
-
-        } finally {
 
             button.disabled = false;
             button.textContent = "Verificar contrato";
-
         }
 
     });
-
-}
-
-
-// =========================
-// RESULTADO DO REGISTRO
-// =========================
-
-function showRegisterSuccess(result, data) {
-
-    result.className = "result-card success-card";
-
-    result.innerHTML = `
-        <div class="result-icon">
-            ✓
-        </div>
-
-        <h2>
-            Registro concluído!
-        </h2>
-
-        <p class="result-message">
-            O contrato foi registrado com sucesso.
-        </p>
-
-        <div class="contract-details">
-
-            <div class="detail">
-                <span>Contrato</span>
-                <strong>${data.contract_name}</strong>
-            </div>
-
-            <div class="detail">
-                <span>Código de verificação</span>
-                <strong class="verification-code">
-                    ${data.verification_code}
-                </strong>
-            </div>
-
-        </div>
-
-        <div class="blockchain-info">
-
-            <span>
-                Registro na Solana
-            </span>
-
-            <a
-                href="${data.solana_explorer_url}"
-                target="_blank"
-                rel="noopener noreferrer"
-            >
-                Ver registro
-            </a>
-
-        </div>
-    `;
-
-    result.hidden = false;
-}
-
-
-// =========================
-// RESULTADO DA VERIFICAÇÃO
-// =========================
-
-function showVerifyResult(result, data) {
-
-    if (data.verified) {
-
-        result.className = "result-card success-card";
-
-        result.innerHTML = `
-            <div class="result-icon">
-                ✓
-            </div>
-
-            <h2>
-                Contrato verificado
-            </h2>
-
-            <p class="result-message">
-                O contrato corresponde ao registro.
-            </p>
-
-            ${contractDetails(data)}
-
-            ${contractLinks(data)}
-        `;
-
-    } else {
-
-        result.className = "result-card error-card";
-
-        result.innerHTML = `
-            <div class="result-icon">
-                !
-            </div>
-
-            <h2>
-                Contrato divergente
-            </h2>
-
-            <p class="result-message">
-                O contrato não corresponde ao registro.
-            </p>
-
-            <p class="difference-message">
-                O arquivo enviado possui um conteúdo diferente
-                do contrato originalmente registrado.
-            </p>
-
-            ${contractDetails(data)}
-
-            ${contractLinks(data)}
-        `;
-
-    }
-
-    result.hidden = false;
-}
-
-
-// =========================
-// INFORMAÇÕES DO CONTRATO
-// =========================
-
-function contractDetails(data) {
-
-    return `
-        <div class="contract-details">
-
-            <div class="detail">
-                <span>Contrato</span>
-                <strong>${data.contract_name}</strong>
-            </div>
-
-            <div class="detail">
-                <span>Empresa</span>
-                <strong>${data.company_name}</strong>
-            </div>
-
-            <div class="detail">
-                <span>Data de registro</span>
-                <strong>${data.registration_date}</strong>
-            </div>
-
-            <div class="detail">
-                <span>Data de término</span>
-                <strong>
-                    ${data.expiration_date || "Não informada"}
-                </strong>
-            </div>
-
-            <div class="detail">
-                <span>Código de verificação</span>
-                <strong class="verification-code">
-                    ${data.verification_code}
-                </strong>
-            </div>
-
-        </div>
-    `;
-}
-
-
-// =========================
-// LINKS DO RESULTADO
-// =========================
-
-function contractLinks(data) {
-
-    return `
-        <div class="result-links">
-
-            <a
-                href="http://127.0.0.1:5000/contract-file/${data.verification_code}"
-                target="_blank"
-                class="secondary-button"
-            >
-                Ver contrato registrado
-            </a>
-
-            <a
-                href="${data.solana_explorer_url}"
-                target="_blank"
-                rel="noopener noreferrer"
-                class="secondary-button"
-            >
-                Ver registro na Solana
-            </a>
-
-        </div>
-    `;
-}
-
-
-// =========================
-// RESULTADO GENÉRICO DE ERRO
-// =========================
-
-function showResult(
-    result,
-    type,
-    title,
-    message
-) {
-
-    result.className = `result-card ${type}-card`;
-
-    result.innerHTML = `
-        <div class="result-icon">
-            !
-        </div>
-
-        <h2>
-            ${title}
-        </h2>
-
-        <p class="result-message">
-            ${message}
-        </p>
-    `;
-
-    result.hidden = false;
 }

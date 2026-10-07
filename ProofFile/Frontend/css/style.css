@@ -474,3 +474,286 @@ footer {
         padding: 24px;
     }
 }
+
+/* ========================================
+   RESULTADOS
+======================================== */
+
+.result-card {
+    margin-top: 30px;
+    padding: 32px;
+    border-radius: 16px;
+    background: #ffffff;
+    border: 1px solid #e5e5e5;
+    text-align: center;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.05);
+}
+
+.result-card[hidden] {
+    display: none;
+}
+
+
+/* Ícone do resultado */
+
+.result-icon {
+    width: 52px;
+    height: 52px;
+
+    margin: 0 auto 18px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    border-radius: 50%;
+
+    font-size: 28px;
+    font-weight: bold;
+}
+
+
+/* Título */
+
+.result-card h2 {
+    margin: 0 0 12px;
+    font-size: 24px;
+}
+
+
+/* Texto */
+
+.result-description {
+    max-width: 600px;
+    margin: 0 auto 25px;
+    line-height: 1.6;
+}
+
+
+/* ========================================
+   RESULTADO POSITIVO
+======================================== */
+
+.success-result,
+.verified-result {
+    border-color: #b7e4c7;
+}
+
+.success-result .result-icon,
+.verified-result .result-icon {
+    background: #d8f3dc;
+    color: #237a3b;
+}
+
+.success-result h2,
+.verified-result h2 {
+    color: #237a3b;
+}
+
+
+/* ========================================
+   RESULTADO NEGATIVO
+======================================== */
+
+.invalid-result {
+    border-color: #f2b8b5;
+}
+
+.invalid-result .result-icon {
+    background: #fde2e1;
+    color: #c62828;
+}
+
+.invalid-result h2 {
+    color: #c62828;
+}
+
+
+/* ========================================
+   ERRO
+======================================== */
+
+.error-result {
+    border-color: #f2b8b5;
+}
+
+.error-result .result-icon {
+    background: #fde2e1;
+    color: #c62828;
+}
+
+.error-result h2 {
+    color: #c62828;
+}
+
+
+/* ========================================
+   CÓDIGO DE VERIFICAÇÃO
+======================================== */
+
+.verification-code-box {
+    margin: 25px auto;
+    padding: 20px;
+
+    max-width: 420px;
+
+    border-radius: 12px;
+
+    background: #f8f8fa;
+    border: 1px solid #e5e5e5;
+}
+
+.verification-code-box span {
+    display: block;
+
+    margin-bottom: 8px;
+
+    font-size: 14px;
+    color: #666;
+}
+
+.verification-code-box strong {
+    display: block;
+
+    font-size: 26px;
+    letter-spacing: 2px;
+
+    color: #111;
+}
+
+
+/* ========================================
+   INFORMAÇÕES DO CONTRATO
+======================================== */
+
+.result-details {
+    max-width: 600px;
+
+    margin: 25px auto;
+
+    display: grid;
+    gap: 12px;
+
+    text-align: left;
+}
+
+.detail-item {
+    display: flex;
+    justify-content: space-between;
+    gap: 20px;
+
+    padding: 14px 16px;
+
+    border-radius: 10px;
+
+    background: #f8f8fa;
+}
+
+.detail-item span {
+    color: #666;
+}
+
+.detail-item strong {
+    text-align: right;
+    color: #222;
+}
+
+
+/* ========================================
+   BOTÕES DOS RESULTADOS
+======================================== */
+
+.result-actions {
+    margin-top: 25px;
+
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.secondary-button,
+.blockchain-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    min-height: 44px;
+
+    padding: 0 18px;
+
+    border-radius: 8px;
+
+    text-decoration: none;
+
+    font-weight: 600;
+
+    transition: 0.2s ease;
+}
+
+.secondary-button {
+    background: #111;
+    color: #ffffff;
+}
+
+.secondary-button:hover {
+    opacity: 0.85;
+}
+
+.blockchain-link {
+    background: #f1f1f3;
+    color: #222;
+}
+
+.blockchain-link:hover {
+    background: #e6e6e8;
+}
+
+
+/* ========================================
+   BOTÃO DESABILITADO
+======================================== */
+
+.primary-button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+
+/* ========================================
+   RESPONSIVIDADE
+======================================== */
+
+@media (max-width: 700px) {
+
+    .result-card {
+        padding: 24px 18px;
+    }
+
+    .result-card h2 {
+        font-size: 21px;
+    }
+
+    .verification-code-box strong {
+        font-size: 22px;
+    }
+
+    .detail-item {
+        flex-direction: column;
+        gap: 5px;
+    }
+
+    .detail-item strong {
+        text-align: left;
+    }
+
+    .result-actions {
+        flex-direction: column;
+    }
+
+    .secondary-button,
+    .blockchain-link {
+        width: 100%;
+    }
+
+}
