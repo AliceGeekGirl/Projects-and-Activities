@@ -1,3 +1,5 @@
 .env
 .venv/
 Backend/uploads/
+__pycache__/
+*.pyc
