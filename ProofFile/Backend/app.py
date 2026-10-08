@@ -1,3 +1,4 @@
+
 # IMPORTAÇÕES
 
 # Flask para criar o servidor web, jsonify para retornar JSON,
@@ -56,6 +57,7 @@ from solders.transaction import Transaction
 # Cliente assíncrono da Solana.
 from solana.rpc.async_api import AsyncClient
 
+
 # CONFIGURAÇÃO
 
 # Carrega as variáveis do arquivo .env.
@@ -90,6 +92,7 @@ app.config["MAX_CONTENT_LENGTH"] = 20 * 1024 * 1024
 MEMO_PROGRAM_ID = Pubkey.from_string(
     "MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr"
 )
+
 
 # FUNÇÕES AUXILIARES
 
@@ -214,16 +217,18 @@ def validate_pdf(file):
 
     return None
 
-#Rota principal do backend
+
+# Rota principal do backend
 @app.route("/")
 def home():
     return "ProofFile Backend está funcionando."
 
-#ROTA DE TESTE DO BANCO
+
+# ROTA DE TESTE DO BANCO
 @app.route("/db")
 def test_database():
-    
-    #Testa se o Backend consegue se conectar ao PostgreSQL.
+
+    # Testa se o Backend consegue se conectar ao PostgreSQL.
     try:
         with psycopg.connect(DATABASE_URL) as conn:
             with conn.cursor() as cur:
@@ -245,7 +250,8 @@ def test_database():
             "error": "Não foi possível conectar ao banco de dados."
         }), 500
 
-#ROTA DE TESTE DO HASH
+
+# ROTA DE TESTE DO HASH
 @app.route("/hash", methods=["POST"])
 def generate_hash():
     """
@@ -276,6 +282,7 @@ def generate_hash():
         "file_hash": file_hash
     })
 
+
 # ROTA DE REGISTRO
 
 @app.route("/register", methods=["POST"])
@@ -291,9 +298,13 @@ async def register_contract():
       ↓
     Código de verificação
       ↓
+    PostgreSQL como pendente
+      ↓
     Solana Memo
       ↓
-    PostgreSQL
+    PostgreSQL atualiza a transação
+      ↓
+    Registro concluído
     """
 
     # 1. VALIDAÇÃO DO ARQUIVO
@@ -307,6 +318,7 @@ async def register_contract():
             "error": validation_error
         }), 400
 
+
     # 2. VALIDAÇÃO DO NOME DO CONTRATO
 
     contract_name = request.form.get("contract_name", "").strip()
@@ -315,6 +327,7 @@ async def register_contract():
         return jsonify({
             "error": "O nome do contrato é obrigatório."
         }), 400
+
 
     # 3. DATA DE EXPIRAÇÃO
 
@@ -326,6 +339,7 @@ async def register_contract():
     if not expiration_date:
         expiration_date = None
 
+
     # 4. LEITURA DO ARQUIVO
 
     file_data = file.read()
@@ -335,6 +349,7 @@ async def register_contract():
             "error": "O arquivo enviado está vazio."
         }), 400
 
+
     # 5. VALIDAÇÃO BÁSICA DO PDF
 
     # PDFs normalmente começam com %PDF.
@@ -343,9 +358,11 @@ async def register_contract():
             "error": "O arquivo enviado não parece ser um PDF válido."
         }), 400
 
+
     # 6. GERAÇÃO DO HASH
 
     file_hash = generate_file_hash(file_data)
+
 
     # 7. VERIFICA SE O HASH JÁ EXISTE
 
@@ -387,9 +404,11 @@ async def register_contract():
             )
         }), 500
 
+
     # 8. GERA CÓDIGO DE VERIFICAÇÃO
 
     verification_code = generate_verification_code()
+
 
     # 9. GERA NOME DO ARQUIVO
 
@@ -398,6 +417,7 @@ async def register_contract():
     )
 
     file_path = UPLOAD_FOLDER / saved_filename
+
 
     # 10. SALVA O ARQUIVO
 
@@ -415,34 +435,8 @@ async def register_contract():
             "error": "Não foi possível salvar o arquivo."
         }), 500
 
-    # 11. REGISTRA NA SOLANA
 
-    try:
-
-        solana_transaction = await register_on_solana(
-            verification_code,
-            file_hash
-        )
-
-    except Exception as error:
-
-        # Se a Solana falhar, remove o arquivo que acabou
-        # de ser salvo para evitar um arquivo órfão.
-        if file_path.exists():
-            file_path.unlink()
-
-        print(
-            f"ERRO AO REGISTRAR NA SOLANA: {error}"
-        )
-
-        return jsonify({
-            "error": (
-                "Não foi possível registrar o contrato "
-                "na Solana."
-            )
-        }), 500
-
-    # 12. SALVA NO POSTGRESQL
+    # 11. SALVA O REGISTRO NO POSTGRESQL COMO PENDENTE
 
     registration_date = date.today()
 
@@ -480,7 +474,7 @@ async def register_contract():
                         expiration_date,
                         str(file_path),
                         file_hash,
-                        solana_transaction
+                        None
                     )
                 )
 
@@ -522,7 +516,94 @@ async def register_contract():
             )
         }), 500
 
-    # 13. RETORNA RESULTADO
+
+    # 12. REGISTRA NA SOLANA
+
+    try:
+
+        solana_transaction = await register_on_solana(
+            verification_code,
+            file_hash
+        )
+
+    except Exception as error:
+
+        # Se a Solana falhar, remove o registro pendente
+        # e o arquivo que acabou de ser salvo.
+        try:
+
+            with psycopg.connect(DATABASE_URL) as conn:
+
+                with conn.cursor() as cur:
+
+                    cur.execute(
+                        """
+                        DELETE FROM contracts
+                        WHERE id = %s;
+                        """,
+                        (contract_id,)
+                    )
+
+        except Exception as database_error:
+
+            print(
+                f"ERRO AO REMOVER REGISTRO PENDENTE: "
+                f"{database_error}"
+            )
+
+        if file_path.exists():
+            file_path.unlink()
+
+        print(
+            f"ERRO AO REGISTRAR NA SOLANA: {error}"
+        )
+
+        return jsonify({
+            "error": (
+                "Não foi possível registrar o contrato "
+                "na Solana."
+            )
+        }), 500
+
+
+    # 13. ATUALIZA O REGISTRO COM A TRANSAÇÃO DA SOLANA
+
+    try:
+
+        with psycopg.connect(DATABASE_URL) as conn:
+
+            with conn.cursor() as cur:
+
+                cur.execute(
+                    """
+                    UPDATE contracts
+                    SET solana_transaction = %s
+                    WHERE id = %s;
+                    """,
+                    (
+                        solana_transaction,
+                        contract_id
+                    )
+                )
+
+    except Exception as error:
+
+        print(
+            f"ERRO AO ATUALIZAR TRANSAÇÃO NO POSTGRESQL: {error}"
+        )
+
+        return jsonify({
+            "error": (
+                "O contrato foi registrado na Solana, "
+                "mas não foi possível finalizar o registro "
+                "no banco de dados."
+            ),
+            "verification_code": verification_code,
+            "solana_transaction": solana_transaction
+        }), 500
+
+
+    # 14. RETORNA RESULTADO
 
     return jsonify({
         "message": "Registro concluído!",
@@ -534,6 +615,7 @@ async def register_contract():
         "file_hash": file_hash,
         "solana_transaction": solana_transaction
     }), 201
+
 
 # CONSULTA DE CONTRATO PELO CÓDIGO
 
@@ -620,6 +702,7 @@ def get_contract_by_code(verification_code):
             )
         }), 500
 
+
 # ROTA DE VERIFICAÇÃO
 
 @app.route("/verify", methods=["POST"])
@@ -656,6 +739,7 @@ async def verify_contract():
             )
         }), 400
 
+
     # 2. ARQUIVO
 
     file = request.files.get("file")
@@ -668,6 +752,7 @@ async def verify_contract():
             "error": validation_error
         }), 400
 
+
     # 3. LEITURA DO ARQUIVO
 
     file_data = file.read()
@@ -678,9 +763,11 @@ async def verify_contract():
             "error": "O arquivo enviado está vazio."
         }), 400
 
+
     # 4. HASH DO ARQUIVO RECEBIDO
 
     file_hash = generate_file_hash(file_data)
+
 
     # 5. BUSCA O REGISTRO
 
@@ -734,9 +821,11 @@ async def verify_contract():
             solana_transaction
         ) = result
 
+
         # 6. COMPARAÇÃO
 
         matches = file_hash == registered_hash
+
 
         # 7. RESULTADO
 
@@ -774,6 +863,7 @@ async def verify_contract():
                 "a verificação."
             )
         }), 500
+
 
 # ACESSO AO PDF REGISTRADO
 
@@ -836,7 +926,9 @@ def get_contract_file(verification_code):
             )
         }), 500
 
-#TRATAMENTO DE ARQUIVO GRANDE
+
+# TRATAMENTO DE ARQUIVO GRANDE
+
 @app.errorhandler(413)
 def file_too_large(error):
     """
@@ -850,6 +942,7 @@ def file_too_large(error):
             "O tamanho máximo permitido é 20 MB."
         )
     }), 413
+
 
 # INICIALIZAÇÃO
 

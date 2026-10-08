@@ -24,7 +24,7 @@ CREATE TABLE contracts (
     expiration_date DATE,                    -- Data de expiração (opcional)
     file_path VARCHAR NOT NULL,              -- Caminho do arquivo
     file_hash VARCHAR UNIQUE NOT NULL,       -- Hash único do arquivo
-    solana_transaction VARCHAR UNIQUE NOT NULL, -- Transação única na Solana
+    solana_transaction VARCHAR UNIQUE, -- Transação única na Solana
 
     PRIMARY KEY (id),                        -- Define o ID como chave primária
     FOREIGN KEY (company_id) REFERENCES companies(id), -- Liga contrato à empresa
