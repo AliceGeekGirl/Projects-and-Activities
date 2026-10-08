@@ -214,14 +214,16 @@ def validate_pdf(file):
 
     return None
 
-# ROTA DE TESTE DO BANCO
+#Rota principal do backend
+@app.route("/")
+def home():
+    return "ProofFile Backend está funcionando."
 
+#ROTA DE TESTE DO BANCO
 @app.route("/db")
 def test_database():
-    """
-    Testa se o Backend consegue se conectar ao PostgreSQL.
-    """
-
+    
+    #Testa se o Backend consegue se conectar ao PostgreSQL.
     try:
         with psycopg.connect(DATABASE_URL) as conn:
             with conn.cursor() as cur:
@@ -243,8 +245,7 @@ def test_database():
             "error": "Não foi possível conectar ao banco de dados."
         }), 500
 
-# ROTA DE TESTE DO HASH
-
+#ROTA DE TESTE DO HASH
 @app.route("/hash", methods=["POST"])
 def generate_hash():
     """
@@ -835,38 +836,7 @@ def get_contract_file(verification_code):
             )
         }), 500
 
-# PÁGINA DE TESTE - VERIFICAÇÃO
-
-@app.route("/verify-test.html")
-def verify_test():
-    """
-    Disponibiliza a página de teste da verificação.
-    """
-
-    frontend_folder = BASE_DIR / "Frontend"
-
-    return send_from_directory(
-        frontend_folder,
-        "verify-test.html"
-    )
-
-# PÁGINA DE TESTE - REGISTRO
-
-@app.route("/register-test.html")
-def register_test():
-    """
-    Disponibiliza a página de teste do registro.
-    """
-
-    frontend_folder = BASE_DIR / "Frontend"
-
-    return send_from_directory(
-        frontend_folder,
-        "register-test.html"
-    )
-
-# TRATAMENTO DE ARQUIVO GRANDE
-
+#TRATAMENTO DE ARQUIVO GRANDE
 @app.errorhandler(413)
 def file_too_large(error):
     """
