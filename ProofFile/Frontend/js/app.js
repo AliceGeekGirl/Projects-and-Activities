@@ -160,7 +160,7 @@ function showRegisterSuccess(data) {
 
         <p class="result-description">
             Seu contrato foi registrado com sucesso.
-            Guarde o código de verificação para futuras consultas.
+            Esse código será usado para verificar o contrato depois.
         </p>
 
         <div class="verification-code-box">
